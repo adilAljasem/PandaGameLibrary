@@ -1,94 +1,128 @@
-using Microsoft.AspNetCore.Http.Connections;
-using Microsoft.AspNetCore.Http.Connections.Client;
 using Microsoft.AspNetCore.SignalR.Client;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
-using Microsoft.VisualBasic;
-using Microsoft.Xna.Framework;
+using Microsoft.AspNetCore.Http.Connections.Client;
+using System;
 using System.Diagnostics;
+using System.Threading.Tasks;
+using Microsoft.Xna.Framework;
+using Microsoft.AspNetCore.Http.Connections;
+using Microsoft.Extensions.DependencyInjection;
 
-namespace PandaGameLibrary.System;
-
-public class NetworkSystem
+namespace PandaGameLibrary.System
 {
+    public class NetworkSystem
+    {
+        public long Ping { get; private set; }
+        public HubConnection hubConnection { get; private set; }
+        private const double UpdateInterval = 1.0 / 3.0;
+        private double updateAccumulator;
+        private bool isConnecting = false;
 
-	public long Ping;
-	public HubConnection hubConnection { get; private set; }
-    private const double UpdateInterval = 1.0 / 3.0;
-    private double updateAccumulator;
+        public async Task StartConnectionAsync(string url)
+        {
+            if (isConnecting) return;
+            isConnecting = true;
 
-    public void StartConnection(string url)
-	{
-		hubConnection = new HubConnectionBuilder().WithUrl(url, delegate(HttpConnectionOptions opt)
-		{
-			// if any other transport used other websocket disconnect on server won't work
-			opt.Transports = HttpTransportType.WebSockets;
+            hubConnection = new HubConnectionBuilder()
+                .WithUrl(url, options =>
+                {
+                    options.Transports = HttpTransportType.WebSockets;
+                    options.WebSocketConfiguration = conf =>
+                    {
+                        conf.RemoteCertificateValidationCallback = (message, cert, chain, errors) => true;
+                    };
+                    options.HttpMessageHandlerFactory = factory => new HttpClientHandler
+                    {
+                        ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true
+                    };
+                    options.CloseTimeout = TimeSpan.FromSeconds(10);
+                })
+                .AddMessagePackProtocol()
+                .WithAutomaticReconnect(new[] { TimeSpan.Zero, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(10) })
+                .Build();
 
-			//these two for localhost to work
-            opt.WebSocketConfiguration = conf =>
+            hubConnection.Closed += async (error) =>
             {
-                conf.RemoteCertificateValidationCallback = (message, cert, chain, errors) => { return true; };
-            };
-            opt.HttpMessageHandlerFactory = factory => new HttpClientHandler
-            {
-                ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => { return true; }
+                Console.WriteLine($"Connection closed. Error: {error?.Message}");
+                await ConnectWithRetryAsync();
             };
 
-        }).AddMessagePackProtocol().Build();
-		hubConnection.StartAsync().ContinueWith(delegate(Task task)
-		{
-			if (task.IsFaulted)
-			{
-                Console.WriteLine($"Error starting Connection: {task.Exception?.GetBaseException().Message}");
-                Console.WriteLine($"Stack trace: {task.Exception?.GetBaseException().StackTrace}");
+          
+
+            hubConnection.Reconnected += connectionId =>
+            {
+                Console.WriteLine($"Reconnected with ConnectionId: {connectionId}");
+                return Task.CompletedTask;
+            };
+
+            hubConnection.On("ReceivePing", ReceivePing);
+
+            await ConnectWithRetryAsync();
+            isConnecting = false;
+        }
+
+        private async Task ConnectWithRetryAsync(int maxAttempts = 5)
+        {
+            for (int i = 0; i < maxAttempts; i++)
+            {
+                try
+                {
+                    await hubConnection.StartAsync();
+                    Console.WriteLine("Connection started successfully.");
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Connection attempt {i + 1} failed: {ex.Message}");
+                    if (i == maxAttempts - 1)
+                    {
+                        Console.WriteLine($"Failed to connect after {maxAttempts} attempts.");
+                        throw;
+                    }
+                    await Task.Delay(5000);
+                }
             }
-            else
-			{
-				Console.WriteLine("Connection started successfully.");
-			}
-		});
+        }
 
-        hubConnection.On("ReceivePing", ReceivePing);
-    }
-    public void ReceivePing()
-    {
-        _pingCompletionSource?.TrySetResult(0);
-    }
-
-
-    public void Update(GameTime gameTime)
-    {
-        double elapsedTime = gameTime.ElapsedGameTime.TotalSeconds;
-        updateAccumulator += elapsedTime;
-        while (updateAccumulator >= UpdateInterval)
+        public void ReceivePing()
         {
-            Task.Run(async () => { await PandaCore.Instance.NetworkSystem.MeasurePingAsync();}) ;
-            updateAccumulator -= UpdateInterval;
+            _pingCompletionSource?.TrySetResult(0);
+        }
 
+        public void Update(GameTime gameTime)
+        {
+            double elapsedTime = gameTime.ElapsedGameTime.TotalSeconds;
+            updateAccumulator += elapsedTime;
+            while (updateAccumulator >= UpdateInterval)
+            {
+                _ = MeasurePingAsync();
+                updateAccumulator -= UpdateInterval;
+            }
+        }
+
+        private TaskCompletionSource<long> _pingCompletionSource;
+
+        public async Task<long> MeasurePingAsync()
+        {
+            if (hubConnection.State != HubConnectionState.Connected)
+            {
+                //Console.WriteLine("Cannot measure ping: connection is not active.");
+                return -1L;
+            }
+
+            Stopwatch stopwatch = new Stopwatch();
+            stopwatch.Start();
+            try
+            {
+                await hubConnection.InvokeAsync("SendPing");
+                stopwatch.Stop();
+                Ping = stopwatch.ElapsedMilliseconds;
+                return Ping;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error measuring ping: " + ex.Message);
+                return -1L;
+            }
         }
     }
-
-    private TaskCompletionSource<long> _pingCompletionSource;
-
-    public async Task<long> MeasurePingAsync()
-    {
-        Stopwatch stopwatch = new Stopwatch();
-        stopwatch.Start();
-        try
-        {
-            await hubConnection.InvokeAsync("SendPing");
-            stopwatch.Stop();
-            Ping = stopwatch.ElapsedMilliseconds;
-            return stopwatch.ElapsedMilliseconds;
-        }
-        catch (Exception ex2)
-        {
-            Exception ex = ex2;
-            Console.WriteLine("Error measuring ping: " + ex.Message);
-            return -1L;
-        }
-    }
-
-
-
 }
