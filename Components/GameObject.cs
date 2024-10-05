@@ -122,13 +122,6 @@ public sealed class GameObject
         return null;
     }
 
-    //public T GetComponent<T>(T com) where T : Component
-    //{
-    //	return (from w in _components.OfType<T>()
-    //		where w.gameobjectId == GameObjectId
-    //		select w).FirstOrDefault();
-    //}
-
     public List<T> GetComponents<T>() where T : Component
     {
         lock (_components)
@@ -152,7 +145,7 @@ public sealed class GameObject
 
     public void RemoveComponent<T>(T Component) where T : Component
     {
-        var component = _components.FirstOrDefault(w=>w.ComponentId == Component.ComponentId);
+        var component = _components.FirstOrDefault(w => w.ComponentId == Component.ComponentId);
         if (component != null)
         {
             _components = _components.Remove(component);
@@ -176,38 +169,29 @@ public sealed class GameObject
 
     public void Update(GameTime gameTime)
     {
-        if (IsEnable)
+        for (int i = 0; i < _components.Count; i++)
         {
-            for (int i = 0; i < _components.Count; i++)
+            Component component = _components[i];
+            if (component.IsEnabled)
             {
-                Component component = _components[i];
-               
-                if (component.IsEnabled)
+                if (component._startPending)
                 {
-                    if (component._startPending)
-                    {
-                        component.Start();
-                        component._startPending = false;
-                    }
-                    component.Update(gameTime);
+                    component.Start();
+                    component._startPending = false;
                 }
+                component.Update(gameTime);
             }
         }
-
     }
 
     public void Draw(SpriteBatch spriteBatch, GameTime gameTime)
     {
-        if (IsEnable)
+        foreach (Component component in _components)
         {
-            foreach (Component component in _components)
+            if (component.IsEnabled)
             {
-                if (component.IsEnabled)
-                {
-                    component.Draw(spriteBatch, gameTime);
-                }
+                component.Draw(spriteBatch, gameTime);
             }
         }
-
     }
 }

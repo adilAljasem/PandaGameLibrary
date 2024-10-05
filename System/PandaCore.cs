@@ -46,7 +46,7 @@ public class PandaCore
             {
                 updateTask = Task.Run(delegate
                 {
-                    UpdateTimeCollisions = CollisionSystem.CheckCollisions(GameObjectSystem.GetAllGameObjects(), gameTime);
+                    UpdateTimeCollisions = CollisionSystem.CheckCollisions(GameObjectSystem.GetEnabledGameObjects(), gameTime);
                 });
             }
 
@@ -56,14 +56,14 @@ public class PandaCore
         GameObjectSystem.UpdateGameObjects(gameTime);
         AudioSystem.Update(gameTime);
         NetworkSystem.Update(gameTime);
-        debugSystem?.Update(gameTime, GameObjectSystem.GetAllGameObjects().ToList());
+        debugSystem?.Update(gameTime, GameObjectSystem.GetEnabledGameObjects().ToList());
 
     }
 
 
     public void Draw(SpriteBatch spriteBatch, GameTime gameTime)
     {
-        RenderSystem.Draw(spriteBatch, GameObjectSystem.GetAllGameObjects(), gameTime);
+        RenderSystem.Draw(spriteBatch, GameObjectSystem.GetEnabledGameObjects(), gameTime);
     }
     public void DrawDeubg()
     {

@@ -81,9 +81,14 @@ namespace PandaGameLibrary.System
             return allGameObjects.Where(go => go.Tag == tag).ToImmutableList();
         }
 
+        public ImmutableList<GameObject> GetEnabledGameObjects()
+        {
+            return allGameObjects.Where(go => go.IsEnable).ToImmutableList();
+        }
+
         public void UpdateGameObjects(GameTime gameTime)
         {
-            foreach (var gameObject in allGameObjects)
+            foreach (var gameObject in GetEnabledGameObjects())
             {
                 gameObject.Update(gameTime);
             }
