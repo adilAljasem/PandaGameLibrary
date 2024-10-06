@@ -1,5 +1,4 @@
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
 
 namespace PandaGameLibrary.Components;
 
@@ -25,8 +24,6 @@ public abstract class Component
 		ComponentId = Guid.NewGuid();
 	}
 
-	
-
 	public void ToggleEnable()
 	{
 		IsEnabled = !IsEnabled;
@@ -45,7 +42,5 @@ public abstract class Component
 	{
 	}
 
-	public virtual void Draw(SpriteBatch spriteBatch, GameTime gameTime)
-	{
-	}
+	
 }

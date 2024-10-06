@@ -8,8 +8,7 @@ namespace PandaGameLibrary.Components
     public class ColliderComponent : Component
     {
         private CircleData circle = new CircleData();
-        private Texture2D pixel;
-
+        public Render2D Render2D { get; set; }
         public bool ShowCollider { get; set; } = false;
         public bool ColliderShapeCircle { get; set; } = true;
         public bool Transparent { get; set; }
@@ -41,8 +40,6 @@ namespace PandaGameLibrary.Components
 
         public ColliderComponent()
         {
-            pixel = new Texture2D(PandaCore.Instance.Game.GraphicsDevice, 1, 1);
-            pixel.SetData(new Color[1] { Color.White });
         }
 
         //public float OtherColliderDistance(ColliderComponent colliderComponent)
@@ -67,6 +64,7 @@ namespace PandaGameLibrary.Components
 
         public override void Awake()
         {
+            Render2D = gameObject.AddComponent<Render2D>();
         }
 
         public override void Start()
@@ -97,9 +95,19 @@ namespace PandaGameLibrary.Components
 
         public override void Update(GameTime gameTime)
         {
-            UpdateCircle();
+            //UpdateCircle();
             UpdateColliderCenterTileMap();
             UpdateGameObjectPosition(gameTime);
+            if (ShowCollider)
+            {
+                Render2D.ShowCircleCollider = true;
+                Render2D.ColliderRadius = Radius;
+                Render2D.ColliderCenter = Center;
+            }
+            else
+            {
+                Render2D.ShowCircleCollider = false;
+            }
         }
 
         public void UpdateColliderCenterTileMap()
@@ -115,35 +123,17 @@ namespace PandaGameLibrary.Components
             }
         }
 
-        private void UpdateCircle()
-        {
-            circle.SetCircleData(Center, Radius, 16);
-            circle.Update();
-        }
+        //private void UpdateCircle()
+        //{
+        //    circle.SetCircleData(Center, Radius, 16);
+        //    circle.Update();
+        //}
 
         private void UpdateGameObjectPosition(GameTime gameTime)
         {
             base.gameObject.Transform.Position += Velocity * (float)gameTime.ElapsedGameTime.TotalSeconds;
         }
 
-        public override void Draw(SpriteBatch spriteBatch, GameTime gameTime)
-        {
-            if (ShowCollider)
-            {
-                if (ColliderShapeCircle)
-                {
-                    circle.Draw(spriteBatch, Color.White);
-                }
-                else
-                {
-                    spriteBatch.Draw(pixel, Bounds, Color.Green * 0.5f);
-                }
-            }
-        }
-
-        public void Dispose()
-        {
-            throw new NotImplementedException();
-        }
+    
     }
 }

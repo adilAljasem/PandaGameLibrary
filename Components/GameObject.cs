@@ -184,14 +184,5 @@ public sealed class GameObject
         }
     }
 
-    public void Draw(SpriteBatch spriteBatch, GameTime gameTime)
-    {
-        foreach (Component component in _components)
-        {
-            if (component.IsEnabled)
-            {
-                component.Draw(spriteBatch, gameTime);
-            }
-        }
-    }
+
 }
