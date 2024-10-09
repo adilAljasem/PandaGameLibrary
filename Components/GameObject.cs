@@ -61,6 +61,7 @@ public sealed class GameObject
 
     }
 
+ 
     public T AddComponent<T>() where T : Component, new()
     {
         T component = new T();
@@ -164,6 +165,11 @@ public sealed class GameObject
     public void RemoveComponentsByTag(string tag)
     {
         _components = _components.RemoveAll(c => c.Tag == tag);
+    }
+
+    public void RemoveComponents()
+    {
+        _components.Clear();
     }
 
 

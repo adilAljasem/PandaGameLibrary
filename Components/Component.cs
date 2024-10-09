@@ -1,4 +1,7 @@
 using Microsoft.Xna.Framework;
+using System.Runtime.Serialization.Formatters.Binary;
+using System.Runtime.Serialization;
+using Newtonsoft.Json;
 
 namespace PandaGameLibrary.Components;
 
@@ -23,8 +26,8 @@ public abstract class Component
 	{
 		ComponentId = Guid.NewGuid();
 	}
-
-	public void ToggleEnable()
+   
+    public void ToggleEnable()
 	{
 		IsEnabled = !IsEnabled;
 	}

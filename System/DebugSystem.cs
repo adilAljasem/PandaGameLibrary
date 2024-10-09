@@ -126,7 +126,7 @@ namespace PandaGameLibrary.System
                     elapsedTimeRender = 0.0; // Reset timer
                 }
                 _stopwatchDraw.Restart();
-                spriteBatch.Begin(SpriteSortMode.Deferred, null, SamplerState.PointWrap, null, null, null, Helper.GetScaleMatrix(1.5f, 1.5f));
+                spriteBatch.Begin(SpriteSortMode.Deferred, null, SamplerState.LinearWrap, null, null, null, Helper.GetScaleMatrix(1.5f, 1.5f));
                 Helper.DrawTextWithOutline(spriteBatch, font, $"EnableObjects: {EnableGameObjects.Count}", new Vector2(170f, 12f), Color.White,Color.Black, 0.5f, new Vector2(),1,SpriteEffects.None,0);
                 Helper.DrawTextWithOutline(spriteBatch, font, $"Colliders: {allColliders.Count}", new Vector2(170f, 30f), Color.White, Color.Black, 0.5f, new Vector2(), 1, SpriteEffects.None, 0);
                 Helper.DrawTextWithOutline(spriteBatch, font, $"Components: {allComponents.Count}", new Vector2(170f, 48f), Color.White, Color.Black, 0.5f, new Vector2(), 1, SpriteEffects.None, 0);

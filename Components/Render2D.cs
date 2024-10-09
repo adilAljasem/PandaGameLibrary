@@ -19,13 +19,15 @@ public class Render2D : Component
     public Color Color { get; set; } = Color.White;
     public float Rotation { get; set; } = 0f;
     public Vector2 Origin { get; set; } = Vector2.Zero;
-    public float Scale { get; set; } = 1f;
+    //public float Scale { get; set; } = 1f;
+    public Vector2 Scale { get; set; } = new Vector2(1,1);
     public float LayerDepth { get; set; } = 1f;
     private SpriteColorEffect? SpriteColorEffect { get; set; }
     private CircleData circle = new CircleData();
     internal bool ShowCircleCollider { get; set; }
     internal float ColliderRadius { get; set; }
     internal Vector2 ColliderCenter { get; set; }
+    private bool Stretched = false;
     public Texture2D LoadTexture(string path, int width, int height)
     {
         Texture = PandaCore.Instance.Game.Content.Load<Texture2D>(path);
@@ -101,8 +103,6 @@ public class Render2D : Component
         }
     }
 
-
-
     public override void Awake()
     {
         Position = base.gameObject.Transform.Position;
@@ -112,7 +112,7 @@ public class Render2D : Component
 
     public void Draw(SpriteBatch spriteBatch, GameTime gameTime)
     {
-        if (Texture != null && !AnimationManagerComponent.IsPlaying)
+        if (Texture != null && !AnimationManagerComponent.IsPlaying && !Stretched)
         {
             spriteBatch.Draw(Texture, Position, SourceRectangle, Color, Rotation, Origin, Scale, spriteEffect, LayerDepth);
         }

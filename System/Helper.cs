@@ -1,18 +1,97 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using System.Reflection;
+using System.Runtime.Serialization.Formatters.Binary;
 
 namespace PandaGameLibrary.System
 {
-    public class Helper
+    public static class Helper
     {
         static KeyboardState currentKeyboardState;
         static KeyboardState _previousKeyboardState;
+
+        public static T DeepClone<T>(this T obj)
+        {
+            if (obj == null)
+            {
+                return default(T);
+            }
+
+            return (T)DeepCloneInternal(obj, new Dictionary<object, object>());
+        }
+
+        private static object DeepCloneInternal(object obj, Dictionary<object, object> clonedObjects)
+        {
+            if (obj == null)
+            {
+                return null;
+            }
+
+            var type = obj.GetType();
+
+            if (type.IsValueType || type == typeof(string))
+            {
+                return obj;
+            }
+
+            if (type.IsArray)
+            {
+                return CloneArray((Array)obj, clonedObjects);
+            }
+
+            if (clonedObjects.ContainsKey(obj))
+            {
+                return clonedObjects[obj];
+            }
+
+            // Special handling for XNA/MonoGame types
+            if (type == typeof(Texture2D) || type == typeof(SpriteFont) || type == typeof(Effect))
+            {
+                return obj; // These are typically shared resources and shouldn't be deep-cloned
+            }
+
+            object clone;
+            try
+            {
+                clone = Activator.CreateInstance(type);
+            }
+            catch (MissingMethodException)
+            {
+                // If there's no parameterless constructor, return the original object
+                // You might want to log this or handle it differently based on your needs
+                return obj;
+            }
+
+            clonedObjects[obj] = clone;
+
+            foreach (var field in type.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
+            {
+                var fieldValue = field.GetValue(obj);
+                var clonedValue = DeepCloneInternal(fieldValue, clonedObjects);
+                field.SetValue(clone, clonedValue);
+            }
+
+            return clone;
+        }
+
+        private static object CloneArray(Array array, Dictionary<object, object> clonedObjects)
+        {
+            var clonedArray = Array.CreateInstance(array.GetType().GetElementType(), array.Length);
+            clonedObjects[array] = clonedArray;
+
+            for (int i = 0; i < array.Length; i++)
+            {
+                var element = array.GetValue(i);
+                var clonedElement = DeepCloneInternal(element, clonedObjects);
+                clonedArray.SetValue(clonedElement, i);
+            }
+
+            return clonedArray;
+        }
+
 
         public static void Update(GameTime gameTime)
         {
@@ -31,7 +110,7 @@ namespace PandaGameLibrary.System
             return Matrix.CreateScale(scaleX * multiplayX, scaleY * multiplayY, 1f);
         }
 
-        public static void DrawTextWithOutline(SpriteBatch spriteBatch,SpriteFont font,string text,Vector2 position,Color textColor,Color outlineColor,float outlineThickness,Vector2 origin,
+        public static void DrawTextWithOutline(SpriteBatch spriteBatch, SpriteFont font, string text, Vector2 position, Color textColor, Color outlineColor, float outlineThickness, Vector2 origin,
 float scale,
     SpriteEffects effects,
     float layerDepth)
@@ -55,4 +134,5 @@ float scale,
 
 
     }
+
 }

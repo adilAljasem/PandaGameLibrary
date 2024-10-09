@@ -84,7 +84,7 @@ internal class AnimationManagerComponent
 		}
 	}
 
-	public void Draw(SpriteBatch spriteBatch, Vector2 pos, Vector2 Origin,float scale, Color color,float rotation, float layer, SpriteEffects spriteEffects)
+	public void Draw(SpriteBatch spriteBatch, Vector2 pos, Vector2 Origin,Vector2 scale, Color color,float rotation, float layer, SpriteEffects spriteEffects)
 	{
 		currentAnimation?.Draw(spriteBatch, pos, color,Origin, scale, rotation, layer, spriteEffects);
 	}

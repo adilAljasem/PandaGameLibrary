@@ -90,7 +90,7 @@ namespace PandaGameLibrary.System
         {
             byte dummy;
             // Check if the HashSet already contains the colliderB ComponentId
-            if (colliderA.CollidingObjects.TryAdd(colliderB.ComponentId,0)) // Add returns false if already exists
+            if (colliderA.CollidingObjects.TryAdd(colliderB.ComponentId, 0)) // Add returns false if already exists
             {
                 colliderA.OnEnter(colliderB.gameObject);
                 colliderB.OnEnter(colliderA.gameObject);
@@ -105,7 +105,7 @@ namespace PandaGameLibrary.System
         private void CheckExitCollisions(ColliderComponent colliderA, ColliderComponent colliderB)
         {
             byte dummy;
-            if (colliderA.CollidingObjects.TryRemove(colliderB.ComponentId,out dummy))
+            if (colliderA.CollidingObjects.TryRemove(colliderB.ComponentId, out dummy))
             {
                 colliderA.OnExit(colliderB.gameObject);
                 colliderB.OnExit(colliderA.gameObject);
@@ -157,6 +157,10 @@ namespace PandaGameLibrary.System
             {
                 ResolveDynamicStaticCollision(collider2, collider1);
             }
+            else if (!collider1.IsDynamic && !collider2.IsDynamic && collider1.ResolveWithStatic && collider2.ResolveWithStatic)
+            {
+                ResolveDoubleStaticCollision(collider1, collider2);
+            }
             // In all other cases (including when TransparentWithStatic is true), do nothing
         }
         private void ResolveDoubleDynamicCollision(ColliderComponent collider1, ColliderComponent collider2)
@@ -201,6 +205,29 @@ namespace PandaGameLibrary.System
             }
         }
 
+        private void ResolveDoubleStaticCollision(ColliderComponent collider1, ColliderComponent collider2)
+        {
+            Vector2 direction = collider1.Center - collider2.Center;
+            float currentDistance = direction.Length();
+            // Handle the case where colliders are in the exact same position
+            if (currentDistance == 0)
+            {
+                direction = new Vector2(0.5f, 0.5f);
+                currentDistance = direction.Length();
+            }
+            float minimumDistance = collider1.Radius + collider2.Radius;
+            float overlapDistance = minimumDistance - currentDistance;
+            if (overlapDistance > 2)
+            {
+                Vector2 movementDirection = Vector2.Normalize(direction);
+                Vector2 resolutionVector = movementDirection * overlapDistance * 0.5f; // Split the resolution between both objects
+
+                // Move both static objects slightly
+                collider1.gameObject.Transform.Position += resolutionVector * 0.1f * (float)gameTime1.ElapsedGameTime.TotalSeconds * 60;
+                collider2.gameObject.Transform.Position -= resolutionVector * 0.1f * (float)gameTime1.ElapsedGameTime.TotalSeconds * 60;
+
+            }
+        }
 
 
     }

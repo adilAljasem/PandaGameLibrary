@@ -80,7 +80,7 @@ namespace PandaGameLibrary.System
         }
 
         // Draw method is now simpler since calculations are done in Update
-        public void Draw(SpriteBatch spriteBatch, Vector2 position, Color color, Vector2 origin, float scale, float rotation, float layer, SpriteEffects spriteEffect)
+        public void Draw(SpriteBatch spriteBatch, Vector2 position, Color color, Vector2 origin, Vector2 scale, float rotation, float layer, SpriteEffects spriteEffect)
         {
             spriteBatch.Draw(SpriteSheet, position, currentSourceRectangle, color, rotation, origin, scale, spriteEffect, layer);
         }

@@ -13,7 +13,8 @@ public class RenderSystem
             .Where(go => go != null && go.IsEnable)
             .SelectMany(go => go.GetComponents<Render2D>())
             .Where(render => render != null && render.IsEnabled)
-            .OrderBy(render => render.gameObject.Transform?.Position.Y ?? float.MaxValue)
+            .OrderByDescending(render => render.LayerDepth) // Sort by layer depth first (higher values first)
+            .ThenBy(render => render.gameObject.Transform?.Position.Y ?? float.MaxValue) // Then sort by Y position
             .ToArray();
 
         foreach (var render in renderableComponents)

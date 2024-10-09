@@ -7,15 +7,12 @@ namespace PandaGameLibrary.Components
 {
     public class ColliderComponent : Component
     {
-        private CircleData circle = new CircleData();
         public Render2D Render2D { get; set; }
         public bool ShowCollider { get; set; } = false;
         public bool ColliderShapeCircle { get; set; } = true;
         public bool Transparent { get; set; }
         public bool TransparentWithStatic { get; set; }
-
         public Rectangle Bounds { get; private set; }
-
         public Vector2 Center { get; set; }
         public float Radius { get; set; } = 10f;
         private bool TileMapOptomaiztion { get; set; } = false;
@@ -27,11 +24,9 @@ namespace PandaGameLibrary.Components
 
         public float Width { get; set; }
         public float Height { get; set; }
-
+        public bool ResolveWithStatic { get; set; }
         public bool IsDynamic { get; set; } = false;
-
         public Vector2 Velocity { get; set; }
-
         public ConcurrentDictionary<Guid, byte> CollidingObjects { get; private set; } = new ConcurrentDictionary<Guid, byte>();
 
         public event Action<GameObject> OnCollision;
@@ -65,6 +60,8 @@ namespace PandaGameLibrary.Components
         public override void Awake()
         {
             Render2D = gameObject.AddComponent<Render2D>();
+            Render2D.LayerDepth = -1;
+            Render2D.Tag = "ColliderRender";
         }
 
         public override void Start()
