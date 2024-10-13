@@ -20,6 +20,7 @@ public class AudioZone : Component
 
     //public Dictionary<string, SoundEffect> soundEffects;
     //private Song Song { get; set; }
+    public SoundEffectInstance currentPlayingSoundEffect;
 
     public bool Islocal { get; set; }
 
@@ -49,15 +50,16 @@ public class AudioZone : Component
     {
         if (PandaCore.Instance.AudioSystem.soundEffects.ContainsKey(name))
         {
-            if (!Islocal)
-            {
-                PandaCore.Instance.AudioSystem.soundEffects[name].Play(MathHelper.Clamp(ZoneAudioVolume, 0, PandaCore.Instance.AudioSystem.AudioVolume ), 0.0f, 0.0f);
+            float volume = !Islocal ?
+                MathHelper.Clamp(ZoneAudioVolume, 0, PandaCore.Instance.AudioSystem.AudioVolume) :
+                MathHelper.Clamp(1, 0, PandaCore.Instance.AudioSystem.AudioVolume);
 
-            }
-            else
-            {
-                PandaCore.Instance.AudioSystem.soundEffects[name].Play(MathHelper.Clamp(1, 0, PandaCore.Instance.AudioSystem.AudioVolume) , 0.0f, 0.0f);
-            }
+            // Create the instance first
+            currentPlayingSoundEffect = PandaCore.Instance.AudioSystem.soundEffects[name].CreateInstance();
+
+            // Set the volume and play
+            currentPlayingSoundEffect.Volume = volume;
+            currentPlayingSoundEffect.Play();
         }
     }
     //internal void LoadSong(string name, string filePath)
@@ -128,6 +130,21 @@ public class AudioZone : Component
     public override void Update(GameTime gameTime)
     {
         Collider.Center = gameObject.Transform.Position;
+        if (currentPlayingSoundEffect != null && currentPlayingSoundEffect.State == SoundState.Playing)
+        {
+            float volume = !Islocal ?
+    MathHelper.Clamp(ZoneAudioVolume, 0, PandaCore.Instance.AudioSystem.AudioVolume) :
+    MathHelper.Clamp(1, 0, PandaCore.Instance.AudioSystem.AudioVolume);
+
+            currentPlayingSoundEffect.Volume = MathHelper.Clamp(volume, 0, PandaCore.Instance.AudioSystem.AudioVolume);
+        }
+        //if (currentPlayingSoundEffect != null)
+        //{
+        //    currentPlayingSoundEffect.Volume  = ZoneAudioVolume;
+        //    Console.WriteLine(currentPlayingSoundEffect.Volume);
+        //}
+
+
 
         //foreach (var audiozone in Core.Instance.AudioSystem.audioZones)
         //{
@@ -140,7 +157,7 @@ public class AudioZone : Component
         //        audiozone.AudioVolume = VolumeBasedOnDistance(audiozone.Collider.Center);
         //    }
         //}
-       
+
     }
 
     public void OnCollide(GameObject other)
@@ -219,7 +236,7 @@ public class AudioZone : Component
         //}
     }
 
- 
+
     public float VolumeBasedOnDistance(Vector2 playerPosition)
     {
         float distance = Vector2.Distance(Collider.Center, playerPosition);

@@ -15,7 +15,6 @@ public class AudioSystem
     public Dictionary<string, SoundEffect> soundEffects;
     public Dictionary<string, Song> songs;
 
-
     internal List<AudioZone> audioZones;
 
     public float AudioVolume { get; set; }
@@ -135,7 +134,7 @@ public class AudioSystem
     {
         Song song = PandaCore.Instance.Game.Content.Load<Song>(filePath);
         songs[name] = song;
-        MediaPlayer.Volume = MusicVolume ;
+        MediaPlayer.Volume = MusicVolume;
 
     }
 
@@ -144,7 +143,7 @@ public class AudioSystem
     {
         if (soundEffects.ContainsKey(name))
         {
-            soundEffects[name].Play(AudioVolume , 0.0f, 0.0f);
+            soundEffects[name].Play(AudioVolume, 0.0f, 0.0f);
         }
     }
 
@@ -199,7 +198,7 @@ public class AudioSystem
     public void SetSoundEffectVolume(float volume)
     {
         AudioVolume = MathHelper.Clamp(volume, 0.0f, 1.0f);
-        AudioVolume = AudioVolume ;
+        AudioVolume = AudioVolume;
     }
 
     // Set the volume for music
@@ -265,7 +264,7 @@ public class AudioSystem
                         }
                         if (otherZone.IsPlaying && otherZone.IsDynamicAudio)
                         {
-                            MediaPlayer.Volume = MathHelper.Clamp(otherZone.GetVolumeBasedOnDistance, 0, PandaCore.Instance.AudioSystem.MusicVolume );
+                            MediaPlayer.Volume = MathHelper.Clamp(otherZone.GetVolumeBasedOnDistance, 0, PandaCore.Instance.AudioSystem.MusicVolume);
 
                         }
                     }
@@ -274,6 +273,7 @@ public class AudioSystem
                     if (otherZone != null && otherZone != audioZone)
                     {
                         otherZone.ZoneAudioVolume = otherZone.VolumeBasedOnDistance(audioZone.Collider.Center);
+                      
                     }
                 }
             }
