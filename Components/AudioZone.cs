@@ -1,6 +1,5 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
-using Microsoft.Xna.Framework.Media;
 using PandaGameLibrary.Components;
 using PandaGameLibrary.System;
 
@@ -9,12 +8,12 @@ namespace PandaGameLibrary.Audio;
 public class AudioZone : Component
 {
     public float Radius { get; set; } // For circular zones
-    private string SoundEffectName { get; set; }
-    public string SongName { get; set; }
+    public string SoundEffectName { get; private set; }
+    public string SongName { get; private set; }
     public bool IsPlaying { get; set; }
     public ColliderComponent Collider { get; set; }
-    public bool IsSong { get; set; }
-    public bool IsDynamicAudio { get; set; }
+    public bool IsSong { get; private set; }
+    public bool IsDynamicAudio { get; private set; }
     public float GetVolumeBasedOnDistance { get; set; }
     public bool IsPlayerInSide { get; set; }
 
@@ -48,7 +47,7 @@ public class AudioZone : Component
     }
     public void PlaySoundEffect(string name)
     {
-        if (PandaCore.Instance.AudioSystem.soundEffects.ContainsKey(name))
+        if (name != null && PandaCore.Instance.AudioSystem.soundEffects.ContainsKey(name))
         {
             float volume = !Islocal ?
                 MathHelper.Clamp(ZoneAudioVolume, 0, PandaCore.Instance.AudioSystem.AudioVolume) :
@@ -60,6 +59,13 @@ public class AudioZone : Component
             // Set the volume and play
             currentPlayingSoundEffect.Volume = volume;
             currentPlayingSoundEffect.Play();
+        }
+    }
+    public void StopCurrentSoundEffect(string name)
+    {
+        if (name != null && PandaCore.Instance.AudioSystem.soundEffects.ContainsKey(name))
+        {
+            currentPlayingSoundEffect?.Stop();
         }
     }
     //internal void LoadSong(string name, string filePath)
@@ -106,7 +112,7 @@ public class AudioZone : Component
 
         //LoadSoundEffect(soundEffect, path);
         PandaCore.Instance.AudioSystem.AddAudioZoneSoundEffect(this, path, soundEffect);
-
+        Console.WriteLine(PandaCore.Instance.AudioSystem.audioZones.Count);
         Collider.OnEnterCollision += OnEnter;
         Collider.OnExitCollision += OnExit;
         Collider.OnCollision += OnCollide;
@@ -124,7 +130,7 @@ public class AudioZone : Component
         //soundEffects = new Dictionary<string, SoundEffect>();
         Collider = gameObject.AddComponent<ColliderComponent>();
         Collider.Transparent = true;
-        PandaCore.Instance.AudioSystem.audioZones.Add(this);
+        //PandaCore.Instance.AudioSystem.audioZones.Add(this);
     }
 
     public override void Update(GameTime gameTime)

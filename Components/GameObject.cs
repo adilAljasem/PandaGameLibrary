@@ -20,8 +20,7 @@ public sealed class GameObject
     public GameObject Parent { get; set; }
     public bool isChild { get; set; }
     public List<GameObject> Children { get; set; } = new List<GameObject>();
-    public bool IsEnable = true;
-
+    public bool IsEnable { get; private set; } = true;
     private bool AwakeCalled = false;
 
     public GameObject()
@@ -55,13 +54,22 @@ public sealed class GameObject
         Children.Remove(child);
     }
 
+    public void SetEnable(bool enable)
+    {
+        IsEnable = enable;
+        foreach (GameObject child in Children)
+        {
+            child?.SetEnable(enable);
+        }
+    }
+
     public GameObject GetChildByTag(string tag)
     {
         return Children.FirstOrDefault((GameObject g) => g.Tag == tag);
 
     }
 
- 
+
     public T AddComponent<T>() where T : Component, new()
     {
         T component = new T();

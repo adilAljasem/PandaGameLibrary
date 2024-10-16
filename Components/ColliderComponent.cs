@@ -5,9 +5,9 @@ using System.Collections.Concurrent;
 
 namespace PandaGameLibrary.Components
 {
-    public class ColliderComponent : Component
+    public sealed class ColliderComponent : Component
     {
-        public Render2D Render2D { get; set; }
+        public Render2D? Render2D { get; set; }
         public bool ShowCollider { get; set; } = false;
         public bool ColliderShapeCircle { get; set; } = true;
         public bool Transparent { get; set; }
@@ -29,13 +29,11 @@ namespace PandaGameLibrary.Components
         public Vector2 Velocity { get; set; }
         public ConcurrentDictionary<Guid, byte> CollidingObjects { get; private set; } = new ConcurrentDictionary<Guid, byte>();
 
-        public event Action<GameObject> OnCollision;
-        public event Action<GameObject> OnEnterCollision;
-        public event Action<GameObject> OnExitCollision;
+        public event Action<GameObject>? OnCollision;
+        public event Action<GameObject>? OnEnterCollision;
+        public event Action<GameObject>? OnExitCollision;
 
-        public ColliderComponent()
-        {
-        }
+      
 
         //public float OtherColliderDistance(ColliderComponent colliderComponent)
         //{

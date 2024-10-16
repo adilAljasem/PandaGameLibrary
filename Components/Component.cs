@@ -1,7 +1,6 @@
 using Microsoft.Xna.Framework;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Runtime.Serialization;
-using Newtonsoft.Json;
 
 namespace PandaGameLibrary.Components;
 

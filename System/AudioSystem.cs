@@ -2,11 +2,7 @@
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Media;
 using PandaGameLibrary.System;
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Security.AccessControl;
-using System.Xml.Linq;
 
 namespace PandaGameLibrary.Audio;
 
@@ -15,8 +11,7 @@ public class AudioSystem
     public Dictionary<string, SoundEffect> soundEffects;
     public Dictionary<string, Song> songs;
 
-    internal List<AudioZone> audioZones;
-
+    internal List<AudioZone> audioZones { get; private set; }
     public float AudioVolume { get; set; }
     public float MusicVolume { get; set; }
 
@@ -244,7 +239,6 @@ public class AudioSystem
 
             //    }
             //}
-
 
             // this for player auido zones
             if (audioZone.Islocal)
