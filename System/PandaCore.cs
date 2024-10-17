@@ -10,17 +10,24 @@ public class PandaCore
     private const double CollisionInterval = 1.0 / 60.0; // 60 times per second
 
     private Task updateTask = Task.CompletedTask;
+    private SpriteBatch spriteBatch1;
+    internal CollisionSystem CollisionSystem { get; } = new CollisionSystem();
+    internal RenderSystem RenderSystem { get; } = new RenderSystem();
+    internal DebugSystem debugSystem;
     public static PandaCore Instance { get; } = new PandaCore();
+    /// <summary>
+    /// To Make PandaGameLibrary Work you need to set Game
+    /// </summary>
     public Game Game { get; set; }
-    //public ContentManager contentManager { get; set; }
-    //public GraphicsDevice graphicsDevice { get; set; }
+    /// <summary>
+    /// GameObjectSystem Is Propertie To Add or Remove Gameobject
+    /// </summary>
     public GameObjectSystem GameObjectSystem { get; } = new GameObjectSystem();
-    public CollisionSystem CollisionSystem { get; } = new CollisionSystem();
-    public RenderSystem RenderSystem { get; } = new RenderSystem();
+    /// <summary>
+    /// AudioSystem Is Propertie To Manage Audio Like Sound Effect And Song
+    /// </summary>
     public AudioSystem AudioSystem { get; set; } = new AudioSystem();
     public NetworkSystem NetworkSystem { get; } = new NetworkSystem();
-    internal DebugSystem debugSystem;
-    private SpriteBatch spriteBatch1;
     internal double UpdateTimeCollisions { get; private set; }
     public void LoadContent(string FontPath)
     {
@@ -28,7 +35,9 @@ public class PandaCore
         debugSystem = new DebugSystem(FontPath);
         debugSystem?.LoadContent(Game.Content);
     }
-
+    /// <summary>
+    /// Call this Method In Update Game Class
+    /// </summary>
     public void Update(GameTime gameTime)
     {
         Helper.Update(gameTime);
@@ -60,11 +69,16 @@ public class PandaCore
 
     }
 
-
+    /// <summary>
+    /// Call this Method In Drow Game Class
+    /// </summary>
     public void Draw(SpriteBatch spriteBatch, GameTime gameTime)
     {
         RenderSystem.Draw(spriteBatch, GameObjectSystem.GetEnabledGameObjects(), gameTime);
     }
+    /// <summary>
+    /// If you want To Enable Debug Draw This Method In Game Class
+    /// </summary>
     public void DrawDeubg()
     {
         debugSystem?.Draw(spriteBatch1);

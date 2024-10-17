@@ -7,7 +7,7 @@ using System.Diagnostics;
 
 namespace PandaGameLibrary.System
 {
-    public class DebugSystem
+    internal class DebugSystem
     {
         Process currentProcess;
 

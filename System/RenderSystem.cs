@@ -5,7 +5,7 @@ using System.Collections.Immutable;
 
 namespace PandaGameLibrary.System;
 
-public class RenderSystem
+internal class RenderSystem
 {
     public void Draw(SpriteBatch spriteBatch, ImmutableList<GameObject> gameObjects, GameTime gameTime)
     {

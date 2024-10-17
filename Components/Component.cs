@@ -7,18 +7,10 @@ namespace PandaGameLibrary.Components;
 public abstract class Component
 {
 	internal bool _startPending = true;
-
-	public Guid ComponentId { get; set; }
-
-
-	//public Guid gameobjectId { get; set; }
-
+	public Guid ComponentId { get; private set; }
 	public GameObject gameObject { get; set; }
-
 	public string Tag { get; set; }
-
 	public bool IsEnabled { get; set; } = true;
-
 
 	//this constracter is working dont remove it
 	public Component()
@@ -31,16 +23,25 @@ public abstract class Component
 		IsEnabled = !IsEnabled;
 	}
 
-	public virtual void Awake()
+
+    /// <summary>
+    /// First Method Get Called In Component is Awake
+    /// </summary>
+    public virtual void Awake()
 	{
 		
 	}
 
-	public virtual void Start()
+    /// <summary>
+    /// Start Method Get Called After Awake and before First Update
+    /// </summary>
+    public virtual void Start()
 	{
 	}
-
-	public virtual void Update(GameTime gameTime)
+    /// <summary>
+    /// Update Method Called EachFrame
+    /// </summary>
+    public virtual void Update(GameTime gameTime)
 	{
 	}
 

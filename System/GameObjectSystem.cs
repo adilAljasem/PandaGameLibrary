@@ -17,6 +17,14 @@ namespace PandaGameLibrary.System
         {
             ImmutableInterlocked.Update(ref allGameObjects, list => list.Remove(gameObject));
         }
+        public void RemoveGameObjectWithChildren(GameObject gameObject)
+        {
+            // Recursively remove all children
+            RemoveChildrenRecursively(gameObject);
+
+            // Remove the game object itself
+            RemoveGameObject(gameObject);
+        }
 
         public void RemoveGameObjectWithChildrenAndParent(GameObject gameObject)
         {

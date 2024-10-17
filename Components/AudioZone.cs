@@ -4,14 +4,16 @@ using PandaGameLibrary.Components;
 using PandaGameLibrary.System;
 
 namespace PandaGameLibrary.Audio;
-
+/// <summary>
+/// AudioZone Is a Component that makes sound play in specific areas within the game
+/// </summary>
 public class AudioZone : Component
 {
-    public float Radius { get; set; } // For circular zones
+    private float Radius { get; set; } // For circular zones
     public string SoundEffectName { get; private set; }
     public string SongName { get; private set; }
     public bool IsPlaying { get; set; }
-    public ColliderComponent Collider { get; set; }
+    public ColliderComponent Collider { get; private set; }
     public bool IsSong { get; private set; }
     public bool IsDynamicAudio { get; private set; }
     public float GetVolumeBasedOnDistance { get; set; }

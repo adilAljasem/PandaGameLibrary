@@ -32,17 +32,17 @@ public sealed class GameObject
 
     public void AddChild(GameObject child)
     {
-        if (Parent != null)
-        {
-            Parent.AddChild(child);
-        }
-        if (!child.isChild && !isChild)
-        {
+        //if (Parent != null)
+        //{
+        //    Parent.AddChild(child);
+        //}
+        //if (!child.isChild && !isChild)
+        //{
             Children.Add(child);
             child.Parent = this;
             child.isChild = true;
             child.Transform = Transform;
-        }
+        //}
     }
 
     public void RemoveChild(GameObject child)

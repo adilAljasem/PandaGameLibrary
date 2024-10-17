@@ -5,7 +5,7 @@ using System.Diagnostics;
 
 namespace PandaGameLibrary.System
 {
-    public class CollisionSystem
+    internal class CollisionSystem
     {
         private float SMOOTHING_FACTOR = 0.4f; // Adjust this value between 0 and 1 for desired smoothness
         private static Random random = new Random();
@@ -54,7 +54,7 @@ namespace PandaGameLibrary.System
                             // Check if the two colliders are within distance and not part of the same object or family
                             if (IsWithinDistance(colliderA, colliderB) &&
                                 colliderA.gameObject.GameObjectId != colliderB.gameObject.GameObjectId &&
-                                !IsParentChildOrSiblings(colliderA.gameObject, colliderB.gameObject))
+                                !IsRelated(colliderA.gameObject, colliderB.gameObject))
                             {
                                 // Handle collision if both colliders have the collision flag set
                                 if (colliderA.Collision && colliderB.Collision)
@@ -123,22 +123,55 @@ namespace PandaGameLibrary.System
             return distance < colliderA.Radius + colliderB.Radius;
         }
 
-        private bool IsParentChildOrSiblings(GameObject a, GameObject b)
+        private bool IsRelated(GameObject a, GameObject b, int maxDepth = 5)
         {
-            if (a.Parent == b || b.Parent == a)
-            {
-                return true;
-            }
-            if (a.Parent != null && a.Parent == b.Parent)
-            {
-                return true;
-            }
-            if (a.Children.Contains(b) || b.Children.Contains(a))
-            {
-                return true;
-            }
+            if (a == b) return true;
+
+            // Check immediate relationships first
+            if (a.Parent == b || b.Parent == a) return true;
+            if (a.Parent != null && a.Parent == b.Parent) return true;
+            if (a.Children.Contains(b) || b.Children.Contains(a)) return true;
+
+            // If maxDepth is 0, we don't check further
+            if (maxDepth == 0) return false;
+
+            // Check if b is a descendant of a
+            if (IsDescendant(a, b, maxDepth)) return true;
+
+            // Check if a is a descendant of b
+            if (IsDescendant(b, a, maxDepth)) return true;
+
             return false;
         }
+
+        private bool IsDescendant(GameObject ancestor, GameObject potential_descendant, int maxDepth)
+        {
+            if (maxDepth == 0) return false;
+
+            foreach (var child in ancestor.Children)
+            {
+                if (child == potential_descendant) return true;
+                if (IsDescendant(child, potential_descendant, maxDepth - 1)) return true;
+            }
+
+            return false;
+        }
+        //private bool IsParentChildOrSiblings(GameObject a, GameObject b)
+        //{
+        //    if (a.Parent == b || b.Parent == a)
+        //    {
+        //        return true;
+        //    }
+        //    if (a.Parent != null && a.Parent == b.Parent)
+        //    {
+        //        return true;
+        //    }
+        //    if (a.Children.Contains(b) || b.Children.Contains(a))
+        //    {
+        //        return true;
+        //    }
+        //    return false;
+        //}
 
         private void ResolveCollision(ColliderComponent collider1, ColliderComponent collider2)
         {
