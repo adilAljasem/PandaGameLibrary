@@ -19,7 +19,7 @@ public sealed class GameObject
     private ImmutableList<Component> _components = ImmutableList<Component>.Empty;
     public GameObject Parent { get; set; }
     public bool isChild { get; set; }
-    public List<GameObject> Children { get; set; } = new List<GameObject>();
+    public ImmutableList<GameObject> Children { get; set; } = ImmutableList<GameObject>.Empty;
     public bool IsEnable { get; private set; } = true;
     private bool AwakeCalled = false;
 
@@ -38,10 +38,16 @@ public sealed class GameObject
         //}
         //if (!child.isChild && !isChild)
         //{
-            Children.Add(child);
-            child.Parent = this;
-            child.isChild = true;
-            child.Transform = Transform;
+        if (child == null || child == this || child.Parent == this)
+        {
+            throw new Exception("Child is null or child trying to add it self or you trying to add parent as child");
+        }
+
+        Children = Children.Add(child);
+        child.Parent = this;
+        child.isChild = true;
+        child.Transform = Transform;
+        child.Children?.ForEach(x => x.Transform = Transform);
         //}
     }
 
@@ -51,7 +57,7 @@ public sealed class GameObject
         child.isChild = false;
         child.Transform = new Transform();
         child.Transform.Position = Transform.Position;
-        Children.Remove(child);
+        Children = Children.Remove(child);
     }
 
     public void SetEnable(bool enable)

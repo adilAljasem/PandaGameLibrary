@@ -4,7 +4,8 @@ namespace PandaGameLibrary.Components;
 
 public class Transform
 {
-	public Vector2 Position { get; set; }
+    public int Id { get; set; }
+    public Vector2 Position { get; set; }
 
 	public float Rotation { get; set; }
 
@@ -12,6 +13,7 @@ public class Transform
 
 	public Transform()
 	{
+		Id = Guid.NewGuid().GetHashCode();
 		Position = Vector2.Zero;
 		Rotation = 0f;
 		Scale = Vector2.One;

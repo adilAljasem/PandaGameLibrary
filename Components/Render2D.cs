@@ -23,11 +23,22 @@ public class Render2D : Component
     public Vector2 Scale { get; set; } = new Vector2(1,1);
     public float LayerDepth { get; set; } = 1f;
     private SpriteColorEffect? SpriteColorEffect { get; set; }
-    private CircleData circle = new CircleData();
+    private CircleData circle;
     internal bool ShowCircleCollider { get; set; }
     internal float ColliderRadius { get; set; }
     internal Vector2 ColliderCenter { get; set; }
     private bool Stretched = false;
+    private bool CircleDataCreated = false;
+
+    public override void Awake()
+    {
+        Position = base.gameObject.Transform.Position;
+        Rotation = base.gameObject.Transform.Rotation;
+        SpriteColorEffect = new SpriteColorEffect(this);
+        circle = new CircleData(Color);
+        //PandaCore.Instance.RenderSystem.AddGameObject(gameObject);
+    }
+
     public Texture2D LoadTexture(string path, int width, int height)
     {
         Texture = PandaCore.Instance.Game.Content.Load<Texture2D>(path);
@@ -103,13 +114,6 @@ public class Render2D : Component
         }
     }
 
-    public override void Awake()
-    {
-        Position = base.gameObject.Transform.Position;
-        Rotation = base.gameObject.Transform.Rotation;
-        SpriteColorEffect = new SpriteColorEffect(this);
-    }
-
     public void Draw(SpriteBatch spriteBatch, GameTime gameTime)
     {
         if (Texture != null && !AnimationManagerComponent.IsPlaying && !Stretched)
@@ -123,11 +127,13 @@ public class Render2D : Component
 
         if (ShowCircleCollider)
         {
-            circle.Draw(spriteBatch, Color.Red);
+            circle.Draw(spriteBatch);
         }
     }
     private void UpdateCircle()
     {
+        if(!CircleDataCreated) circle = new CircleData(Color);
+        CircleDataCreated = true;
         circle.SetCircleData(ColliderCenter, ColliderRadius, 16);
         circle.Update();
     }

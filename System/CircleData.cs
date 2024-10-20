@@ -18,11 +18,13 @@ internal class CircleData
 	public float Radius { get; private set; }
 
 	public int Segments { get; private set; }
+    private Color Color { get; set; }
 
-	public CircleData()
+    public CircleData(Color color)
 	{
+		this.Color = color;
 		pixel = new Texture2D(PandaCore.Instance.Game.GraphicsDevice, 1, 1);
-		pixel.SetData(new Color[1] { Color.Red });
+		pixel.SetData(new Color[1] { Color });
 	}
 
 	public void SetCircleData(Vector2 center, float radius, int segments)
@@ -63,18 +65,18 @@ internal class CircleData
 		}
 	}
 
-	public void Draw(SpriteBatch spriteBatch, Color color)
+	public void Draw(SpriteBatch spriteBatch)
 	{
 		foreach (CircleSegment segment in circleSegments)
 		{
-			DrawLine(spriteBatch, segment.Start, segment.End, color);
+			DrawLine(spriteBatch, segment.Start, segment.End);
 		}
 	}
 
-	private void DrawLine(SpriteBatch spriteBatch, Vector2 start, Vector2 end, Color color)
+	private void DrawLine(SpriteBatch spriteBatch, Vector2 start, Vector2 end)
 	{
 		Vector2 edge = end - start;
 		float angle = (float)Math.Atan2(edge.Y, edge.X);
-		spriteBatch.Draw(pixel, new Rectangle((int)start.X, (int)start.Y, (int)edge.Length(), 1), null, color, angle, Vector2.Zero, SpriteEffects.None, 0f);
+		spriteBatch.Draw(pixel, new Rectangle((int)start.X, (int)start.Y, (int)edge.Length(), 1), null, Color, angle, Vector2.Zero, SpriteEffects.None, 0f);
 	}
 }

@@ -34,6 +34,7 @@ public class PandaCore
         spriteBatch1 = new SpriteBatch(Game.GraphicsDevice);
         debugSystem = new DebugSystem(FontPath);
         debugSystem?.LoadContent(Game.Content);
+        AudioSystem.Initialize(Game.Content);
     }
     /// <summary>
     /// Call this Method In Update Game Class

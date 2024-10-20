@@ -1,5 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
+using Microsoft.Xna.Framework.Media;
 using PandaGameLibrary.Components;
 using PandaGameLibrary.System;
 
@@ -9,246 +10,186 @@ namespace PandaGameLibrary.Audio;
 /// </summary>
 public class AudioZone : Component
 {
-    private float Radius { get; set; } // For circular zones
-    public string SoundEffectName { get; private set; }
+    private float Radius { get; set; }
+    private Vector2 _playerPosition;
     public string SongName { get; private set; }
     public bool IsPlaying { get; set; }
     public ColliderComponent Collider { get; private set; }
-    public bool IsSong { get; private set; }
     public bool IsDynamicAudio { get; private set; }
-    public float GetVolumeBasedOnDistance { get; set; }
-    public bool IsPlayerInSide { get; set; }
+    public float ZoneAudioVolume { get; set; } = 1.0f;
+    public float ZoneMusicVolume { get; set; } = 1.0f;
+    public bool IsLocal { get; set; }
 
-    //public Dictionary<string, SoundEffect> soundEffects;
-    //private Song Song { get; set; }
-    public SoundEffectInstance currentPlayingSoundEffect;
-
-    public bool Islocal { get; set; }
-
-    public float ZoneAudioVolume { get; set; }
-    //public float ZoneMusicVolume { get; set; }
-
-    //public void PlaySong(string name, bool loop = true)
-    //{
-    //    if (Song != null)
-    //    {
-    //        MediaPlayer.Play(Song);
-    //        MediaPlayer.IsRepeating = loop;
-
-    //    }
-    //}
-    //public void SetMusicVolume(float volume)
-    //{
-    //    ZoneMusicVolume = MathHelper.Clamp(volume, 0.0f, 1.0f);
-    //    MediaPlayer.Volume = ZoneMusicVolume;
-    //}
-    public void SetSoundEffectVolume(float volume)
-    {
-        ZoneAudioVolume = MathHelper.Clamp(volume, 0.0f, 1.0f);
-        ZoneAudioVolume = ZoneAudioVolume * 100;
-    }
-    public void PlaySoundEffect(string name)
-    {
-        if (name != null && PandaCore.Instance.AudioSystem.soundEffects.ContainsKey(name))
-        {
-            float volume = !Islocal ?
-                MathHelper.Clamp(ZoneAudioVolume, 0, PandaCore.Instance.AudioSystem.AudioVolume) :
-                MathHelper.Clamp(1, 0, PandaCore.Instance.AudioSystem.AudioVolume);
-
-            // Create the instance first
-            currentPlayingSoundEffect = PandaCore.Instance.AudioSystem.soundEffects[name].CreateInstance();
-
-            // Set the volume and play
-            currentPlayingSoundEffect.Volume = volume;
-            currentPlayingSoundEffect.Play();
-        }
-    }
-    public void StopCurrentSoundEffect(string name)
-    {
-        if (name != null && PandaCore.Instance.AudioSystem.soundEffects.ContainsKey(name))
-        {
-            currentPlayingSoundEffect?.Stop();
-        }
-    }
-    //internal void LoadSong(string name, string filePath)
-    //{
-    //    Song = Core.Instance.contentManager.Load<Song>(filePath);
-    //    MediaPlayer.Volume = MusicVolume / 100f;
-
-    //}
-    // Load a sound effect from file
-    //internal void LoadSoundEffect(string name, string filePath)
-    //{
-    //    SoundEffect soundEffect = Core.Instance.contentManager.Load<SoundEffect>(filePath);
-    //    soundEffects[name] = soundEffect;
-    //}
-    public void InitializeSongAudioZone(string path, float radius, string songName, bool IsDynamic)
-    {
-        this.IsDynamicAudio = IsDynamic;
-        Radius = radius;
-        Collider.Radius = radius;
-        Collider.Center = gameObject.Transform.Position;
-        SongName = songName;
-        IsPlaying = false;
-        IsSong = true;
-
-        //LoadSong(songName, path);
-        PandaCore.Instance.AudioSystem.AddAudioZoneSong(this, path, radius, songName);
-
-        Collider.OnEnterCollision += OnEnter;
-        Collider.OnExitCollision += OnExit;
-        Collider.OnCollision += OnCollide;
-    }
-
-    public void InitializeSoundEffectAudioZone(string path, float radius, string soundEffect, bool IsDynamic)
-    {
-        this.IsDynamicAudio = IsDynamic;
-
-
-        Radius = radius;
-        Collider.Radius = radius;
-        Collider.Center = gameObject.Transform.Position;
-        SoundEffectName = soundEffect;
-        IsPlaying = false;
-        IsSong = false;
-
-        //LoadSoundEffect(soundEffect, path);
-        PandaCore.Instance.AudioSystem.AddAudioZoneSoundEffect(this, path, soundEffect);
-        Console.WriteLine(PandaCore.Instance.AudioSystem.audioZones.Count);
-        Collider.OnEnterCollision += OnEnter;
-        Collider.OnExitCollision += OnExit;
-        Collider.OnCollision += OnCollide;
-
-    }
-
-    //public void PlaySoundEffect(string name)
-    //{
-    //    Core.Instance.AudioSystem.PlaySoundEffect(name);
-    //}
-
+    private Dictionary<string, List<SoundEffectInstance>> currentPlayingSoundEffects = new Dictionary<string, List<SoundEffectInstance>>();
+    private List<string> soundEffectNames = new List<string>();
 
     public override void Awake()
     {
-        //soundEffects = new Dictionary<string, SoundEffect>();
         Collider = gameObject.AddComponent<ColliderComponent>();
         Collider.Transparent = true;
-        //PandaCore.Instance.AudioSystem.audioZones.Add(this);
+        Collider.Color = Color.Blue;
     }
 
     public override void Update(GameTime gameTime)
     {
         Collider.Center = gameObject.Transform.Position;
-        if (currentPlayingSoundEffect != null && currentPlayingSoundEffect.State == SoundState.Playing)
+        UpdateAudioVolume();
+        CleanUpFinishedSoundEffects();
+    }
+
+    public void InitializeAudioZone(string path, float radius, string audioName, bool isSong, bool isDynamic)
+    {
+        Radius = radius;
+        Collider.Radius = radius;
+        IsDynamicAudio = isDynamic;
+
+        if (isSong)
         {
-            float volume = !Islocal ?
-    MathHelper.Clamp(ZoneAudioVolume, 0, PandaCore.Instance.AudioSystem.AudioVolume) :
-    MathHelper.Clamp(1, 0, PandaCore.Instance.AudioSystem.AudioVolume);
-
-            currentPlayingSoundEffect.Volume = MathHelper.Clamp(volume, 0, PandaCore.Instance.AudioSystem.AudioVolume);
+            SongName = audioName;
+            PandaCore.Instance.AudioSystem.songs[audioName] = PandaCore.Instance.Game.Content.Load<Song>(path);
         }
-        //if (currentPlayingSoundEffect != null)
-        //{
-        //    currentPlayingSoundEffect.Volume  = ZoneAudioVolume;
-        //    Console.WriteLine(currentPlayingSoundEffect.Volume);
-        //}
+        else
+        {
+            AddSoundEffect(path, audioName);
+        }
 
-
-
-        //foreach (var audiozone in Core.Instance.AudioSystem.audioZones)
-        //{
-        //    if (audiozone != null && audiozone.Owner == Owner)
-        //    {
-        //        continue;
-        //    }
-        //    if (audiozone != null && Islocal)
-        //    {
-        //        audiozone.AudioVolume = VolumeBasedOnDistance(audiozone.Collider.Center);
-        //    }
-        //}
-
+        Collider.OnEnterCollision += OnEnter;
+        Collider.OnExitCollision += OnExit;
+        Collider.OnCollision += OnCollision;
     }
 
-    public void OnCollide(GameObject other)
+    public void AddSoundEffect(string path, string soundEffectName)
     {
-
-        //if (other != null && gameObject.Tag == "player")
-        //{
-        //    var otherAudioZone = other.GetComponent<AudioZone>();
-
-        //    if (Islocal && otherAudioZone != null && otherAudioZone.IsDynamicAudio)
-        //    {
-        //        GetVolumeBasedOnDistance = VolumeBasedOnDistance(other.Transform.Position);
-
-        //    }
-        //}
-
+        if (!soundEffectNames.Contains(soundEffectName))
+        {
+            soundEffectNames.Add(soundEffectName);
+            PandaCore.Instance.AudioSystem.soundEffects[soundEffectName] = PandaCore.Instance.Game.Content.Load<SoundEffect>(path);
+        }
     }
 
-    public void OnEnter(GameObject other)
+    public void PlayAudio()
     {
-        // this method is from non player auido zone to player auido zone
-        //if (other != null && gameObject.Tag == "player")
-        //{
-        //    var OtherAudioZone = other.GetComponent<AudioZone>();
-        //    if (OtherAudioZone != null && Islocal)
-        //    {
-        //        OtherAudioZone.IsPlayerInSide = true;
+        if (!string.IsNullOrEmpty(SongName))
+        {
+            PandaCore.Instance.AudioSystem.PlaySong(SongName, false);
+        }
 
-        //        if (OtherAudioZone.IsDynamicAudio)
-        //        {
-        //            GetVolumeBasedOnDistance = VolumeBasedOnDistance(other.Transform.Position);
+        foreach (var soundEffectName in soundEffectNames)
+        {
+            PlaySoundEffect(soundEffectName);
+        }
 
-        //            Core.Instance.AudioSystem.FadeOutCurrentSong();
-        //            Core.Instance.AudioSystem.FadeInSong(SongName);
-        //        }
-        //        else if (OtherAudioZone.IsSong)
-        //        {
-        //            Core.Instance.AudioSystem.FadeOutCurrentSong();
-        //            Core.Instance.AudioSystem.FadeInSong(SongName);
-        //            IsPlaying = true;
-        //        }
-        //    }
-
-        //}
-
+        IsPlaying = true;
     }
 
-    public void OnExit(GameObject other)
+    public void PlaySoundEffect(string soundEffectName)
     {
-        // this method is from non player auido zone to player auido zone
+        if (string.IsNullOrEmpty(soundEffectName) || !PandaCore.Instance.AudioSystem.soundEffects.TryGetValue(soundEffectName, out SoundEffect soundEffect))
+        {
+            return;
+        }
 
-        //if (other != null && gameObject.Tag == "player")
-        //{
-        //    var OtherAudioZone = other.GetComponent<AudioZone>();
-        //    if (OtherAudioZone != null && Islocal)
-        //    {
+        var instance = soundEffect.CreateInstance();
+        instance.IsLooped = false;
+        instance.Volume = IsLocal ? PandaCore.Instance.AudioSystem.AudioVolume : ZoneAudioVolume * PandaCore.Instance.AudioSystem.AudioVolume;
+        instance.Play();
 
-        //        IsPlayerInSide = false;
-
-        //        if (OtherAudioZone.IsDynamicAudio)
-        //        {
-        //            GetVolumeBasedOnDistance = VolumeBasedOnDistance(other.Transform.Position);
-
-        //            Core.Instance.AudioSystem.FadeOutCurrentSong();
-        //            MediaPlayer.Volume = Core.Instance.AudioSystem.MusicVolume;
-
-
-        //        }
-        //        else if (OtherAudioZone.IsPlaying && OtherAudioZone.IsSong)
-        //        {
-        //            Core.Instance.AudioSystem.FadeOutCurrentSong();
-        //            OtherAudioZone.IsPlaying = false;
-        //        }
-        //    }
-
-        //}
+        if (!currentPlayingSoundEffects.TryGetValue(soundEffectName, out List<SoundEffectInstance> instances))
+        {
+            instances = new List<SoundEffectInstance>();
+            currentPlayingSoundEffects[soundEffectName] = instances;
+        }
+        instances.Add(instance);
     }
 
-
-    public float VolumeBasedOnDistance(Vector2 playerPosition)
+    public void StopAudio()
     {
+        if (!string.IsNullOrEmpty(SongName))
+        {
+            PandaCore.Instance.AudioSystem.StopSong();
+        }
+
+        StopAllSoundEffects();
+        IsPlaying = false;
+    }
+
+    public void StopAllSoundEffects()
+    {
+        foreach (var instances in currentPlayingSoundEffects.Values)
+        {
+            foreach (var instance in instances)
+            {
+                instance.Stop();
+            }
+            instances.Clear();
+        }
+    }
+
+    public void StopSoundEffect(string soundEffectName)
+    {
+        if (currentPlayingSoundEffects.TryGetValue(soundEffectName, out List<SoundEffectInstance> instances))
+        {
+            foreach (var instance in instances)
+            {
+                instance.Stop();
+            }
+            instances.Clear();
+        }
+    }
+
+    private void UpdateAudioVolume()
+    {
+        float volumeMultiplier = IsDynamicAudio ? CalculateVolumeBasedOnDistance() : 1f;
+        float finalVolume = ZoneAudioVolume * volumeMultiplier;
+
+        if (!string.IsNullOrEmpty(SongName))
+        {
+            ZoneMusicVolume = IsLocal ? PandaCore.Instance.AudioSystem.MusicVolume : finalVolume * PandaCore.Instance.AudioSystem.MusicVolume;
+            MediaPlayer.Volume = ZoneMusicVolume;
+        }
+
+        foreach (var instances in currentPlayingSoundEffects.Values)
+        {
+            foreach (var instance in instances)
+            {
+                instance.Volume = IsLocal ? PandaCore.Instance.AudioSystem.AudioVolume : finalVolume * PandaCore.Instance.AudioSystem.AudioVolume;
+            }
+        }
+    }
+
+    private void CleanUpFinishedSoundEffects()
+    {
+        foreach (var kvp in currentPlayingSoundEffects)
+        {
+            kvp.Value.RemoveAll(instance => instance.State == SoundState.Stopped);
+        }
+    }
+
+    private float CalculateVolumeBasedOnDistance()
+    {
+        Vector2 playerPosition = _playerPosition;
         float distance = Vector2.Distance(Collider.Center, playerPosition);
-        float volume = 1.0f - MathHelper.Clamp(distance / Radius, 0.0f, 1.0f);
-        return volume;
+        return 1.0f - MathHelper.Clamp(distance / Radius, 0.0f, 1.0f);
+    }
+
+    private void OnEnter(GameObject other)
+    {
+        // Implementation for when an object enters the audio zone
+    }
+
+    private void OnCollision(GameObject other)
+    {
+        if (other.Tag == "player")
+        {
+            var AudioZonePlayerGameObject = other.Children.Find(w => w.Tag == "AudioZone Player");
+            var playerAudioZone = AudioZonePlayerGameObject?.GetComponent<AudioZone>();
+            if (playerAudioZone != null && playerAudioZone.IsLocal) _playerPosition = other.Transform.Position;
+        }
+    }
+
+    private void OnExit(GameObject other)
+    {
+        // Implementation for when an object exits the audio zone
     }
 }
+

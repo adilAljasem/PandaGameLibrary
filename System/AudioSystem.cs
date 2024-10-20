@@ -1,278 +1,92 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
+using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Media;
-using PandaGameLibrary.System;
-using System.Diagnostics;
 
 namespace PandaGameLibrary.Audio;
-
 public class AudioSystem
 {
-    public Dictionary<string, SoundEffect> soundEffects;
-    public Dictionary<string, Song> songs;
+    public Dictionary<string, SoundEffect> soundEffects = new Dictionary<string, SoundEffect>();
+    public Dictionary<string, Song> songs = new Dictionary<string, Song>();
 
-    internal List<AudioZone> audioZones { get; private set; }
-    public float AudioVolume { get; set; }
-    public float MusicVolume { get; set; }
+    public float AudioVolume { get; set; } = 1.0f;
+    public float MusicVolume { get; set; } = 1.0f;
 
-    public Song previousSong;
     private Song currentSong;
-    private float targetVolume = 1f;
-    private float fadeSpeed = 2005.5f; // Adjust the speed of fade in/out
-    private bool isFadingIn = false;
-    private bool isFadingOut = false;
-    private bool IsFadingRunning = false;
-    private bool WasPlayerInside = false;
-    private string songName;
+    private ContentManager content;
 
-    public void RemoveAudioZone(AudioZone audioZone)
+    public void Initialize(ContentManager contentManager)
     {
-        audioZones.Remove(audioZone);
+        content = contentManager;
     }
-
-    //public void PlaySong(string name)
-    //{
-    //    //targetVolume = 1f;
-    //    if (songs.ContainsKey(name))
-    //    {
-    //        PlaySong(name);
-    //        //isFadingIn = true;
-    //        //Console.WriteLine("fade in called");
-    //        WasPlayerInside = true;
-    //    }
-    //}
-    private object lockObject = new object();
-
-    public void StopCurrentSongSavePrevious()
+    public void LoadSoundEffect(string name, string path)
     {
-        if (MediaPlayer.Queue.ActiveSong != null)
+        if (!soundEffects.ContainsKey(name))
         {
-            previousSong = MediaPlayer.Queue.ActiveSong;
-            MediaPlayer.Stop();
-            //PlaySong(song);
-            //isFadingIn = true;
-            //Console.WriteLine("fade in called");
-            //WasPlayerInside = true;
-        }
-
-        //MediaPlayer.Stop();
-        //if (WasPlayerInside && previousSong != null) MediaPlayer.Play(previousSong);
-        //previousSong = MediaPlayer.Queue.ActiveSong;
-        ////isFadingOut = true;
-        ////Console.WriteLine("fade out called");
-        //WasPlayerInside = false;
-    }
-
-    //private void UpdateFade(GameTime gameTime)
-    //{
-    //    if (isFadingOut )
-    //    {
-    //        MediaPlayer.Volume -= MathHelper.Lerp(MediaPlayer.Volume, 0, 1);
-
-    //        if (MediaPlayer.Volume <= 0)
-    //        {
-    //            StopSong();
-    //            MediaPlayer.Volume = 0f;
-    //            isFadingOut = false;
-
-    //        }
-    //    }
-    //    //if (isFadingIn )
-    //    //{
-    //    //    MediaPlayer.Volume += 0.6f * (float)gameTime.ElapsedGameTime.TotalSeconds;
-    //    //    Console.WriteLine(MediaPlayer.Volume);
-    //    //    if (MediaPlayer.Volume >= targetVolume)
-    //    //    {
-    //    //        MediaPlayer.Volume = targetVolume;
-    //    //        isFadingIn = false;
-
-    //    //    }
-    //    //}
-
-    //}
-
-
-    public AudioSystem()
-    {
-        soundEffects = new Dictionary<string, SoundEffect>();
-        songs = new Dictionary<string, Song>();
-
-        audioZones = new List<AudioZone>();
-
-    }
-    // Add an audio zone
-    internal void AddAudioZoneSong(AudioZone zone, string path, float radius, string songName)
-    {
-        audioZones.Add(zone);
-        //zone.InitializeSongAudioZone(path, radius, songName);
-
-        LoadSong(songName, path);
-    }
-
-    internal void AddAudioZoneSoundEffect(AudioZone zone, string path, string SoundEffectName)
-    {
-        audioZones.Add(zone);
-        //zone.InitializeSoundEffectAudioZone(path, radius, SoundEffectName);
-
-        LoadSoundEffect(SoundEffectName, path);
-    }
-
-    //Load a sound effect from file
-    public void LoadSoundEffect(string name, string filePath)
-    {
-        SoundEffect soundEffect = PandaCore.Instance.Game.Content.Load<SoundEffect>(filePath);
-        soundEffects[name] = soundEffect;
-    }
-
-    // Load a song from file
-    public void LoadSong(string name, string filePath)
-    {
-        Song song = PandaCore.Instance.Game.Content.Load<Song>(filePath);
-        songs[name] = song;
-        MediaPlayer.Volume = MusicVolume;
-
-    }
-
-    // Play a sound effect
-    public void PlaySoundEffect(string name)
-    {
-        if (soundEffects.ContainsKey(name))
-        {
-            soundEffects[name].Play(AudioVolume, 0.0f, 0.0f);
+            soundEffects[name] = content.Load<SoundEffect>(path);
         }
     }
 
-    // Play a song
-    public void PlaySong(string name, bool loop = true)
+    public void LoadSong(string name, string path)
     {
-        if (name != null && songs.ContainsKey(name))
+        if (!songs.ContainsKey(name))
         {
-            songName = name;
-
-            try
-            {
-                MediaPlayer.Stop();
-                MediaPlayer.Play(songs[name]);
-                MediaPlayer.IsRepeating = loop;
-            }
-            catch (Exception ex)
-            {
-                // Log the details
-                Debug.WriteLine($"Error playing song '{name}': {ex.Message}");
-                // You can also handle this error gracefully, like notifying the player or attempting a recovery.
-            }
+            songs[name] = content.Load<Song>(path);
         }
     }
 
-
-    // Pause the currently playing song
-    public void PauseSong()
+    public void PlaySoundEffect(string name, bool isGlobal = true, float volume = 1.0f)
     {
-        if (MediaPlayer.State == MediaState.Playing)
+        if (soundEffects.TryGetValue(name, out SoundEffect effect))
         {
-            MediaPlayer.Pause();
+            effect.Play(volume * AudioVolume, 0.0f, 0.0f);
         }
     }
 
-    // Resume the paused song
-    public void ResumeSong()
+    public void PlaySong(string name, bool isGlobal = true, bool repeat = true)
     {
-        if (MediaPlayer.State == MediaState.Paused)
+        if (songs.TryGetValue(name, out Song song))
         {
-            MediaPlayer.Resume();
+            MediaPlayer.Play(song);
+            MediaPlayer.IsRepeating = repeat;
+            MediaPlayer.Volume = MusicVolume;
+            currentSong = song;
         }
     }
 
-    // Stop the currently playing song
     public void StopSong()
     {
         MediaPlayer.Stop();
     }
 
-    //// Set the volume for sound effects
-    public void SetSoundEffectVolume(float volume)
+    public void SetAudioVolume(float volume)
     {
         AudioVolume = MathHelper.Clamp(volume, 0.0f, 1.0f);
-        AudioVolume = AudioVolume;
     }
 
-    // Set the volume for music
     public void SetMusicVolume(float volume)
     {
         MusicVolume = MathHelper.Clamp(volume, 0.0f, 1.0f);
         MediaPlayer.Volume = MusicVolume;
     }
 
-    // Get the volume for sound effects
-    public float GetSoundEffectVolume()
+    // Methods for fading in/out songs
+    public void FadeInSong(string name, float duration = 1.0f)
     {
-        return AudioVolume;
+        // Implement fade-in logic
     }
 
-    // Get the volume for music
-    public float GetMusicVolume()
+    public void FadeOutCurrentSong(float duration = 1.0f)
     {
-        return MusicVolume;
+        // Implement fade-out logic
     }
 
     public void Update(GameTime gameTime)
     {
-        //UpdateFade(gameTime);
 
-
-        foreach (var audioZone in audioZones)
-        {
-            //// this for non player auido zones
-            //if (audioZone.IsPlayerInSide && audioZone.IsSong)
-            //{
-            //    if (!audioZone.IsPlaying)
-            //    {
-            //        if (!string.IsNullOrEmpty(audioZone.SongName) && songs.ContainsKey(audioZone.SongName))
-            //        {
-            //            PlaySong(audioZone.SongName);
-            //        }
-            //        audioZone.IsPlaying = true;
-            //    }
-            //    if (audioZone.IsPlaying && audioZone.IsDynamicAudio)
-            //    {
-            //        MediaPlayer.Volume = MathHelper.Clamp(audioZone.GetVolumeBasedOnDistance, 0, Core.Instance.AudioSystem.MusicVolume );
-
-            //    }
-            //}
-
-            // this for player auido zones
-            if (audioZone.Islocal)
-            {
-                foreach (var otherZone in audioZones)
-                {
-
-                    if (otherZone.IsPlayerInSide && otherZone.IsSong)
-                    {
-                        if (!otherZone.IsPlaying)
-                        {
-                            if (!string.IsNullOrEmpty(otherZone.SongName) && songs.ContainsKey(otherZone.SongName))
-                            {
-                                PlaySong(otherZone.SongName);
-                            }
-                            otherZone.IsPlaying = true;
-                        }
-                        if (otherZone.IsPlaying && otherZone.IsDynamicAudio)
-                        {
-                            MediaPlayer.Volume = MathHelper.Clamp(otherZone.GetVolumeBasedOnDistance, 0, PandaCore.Instance.AudioSystem.MusicVolume);
-
-                        }
-                    }
-
-
-                    if (otherZone != null && otherZone != audioZone)
-                    {
-                        otherZone.ZoneAudioVolume = otherZone.VolumeBasedOnDistance(audioZone.Collider.Center);
-                      
-                    }
-                }
-            }
-        }
     }
 
-
 }
+
+
+

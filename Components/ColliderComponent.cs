@@ -7,7 +7,7 @@ namespace PandaGameLibrary.Components
 {
     public sealed class ColliderComponent : Component
     {
-        public Render2D? Render2D { get; set; }
+        private Render2D Render2D { get; set; }
         public bool ShowCollider { get; set; } = false;
         public bool ColliderShapeCircle { get; set; } = true;
         public bool Transparent { get; set; }
@@ -21,7 +21,7 @@ namespace PandaGameLibrary.Components
         private float YPosition { get; set; }
         private float imageWidth;
         private float imageHeight;
-
+        public Color Color { get { return Render2D.Color;  } set { Render2D.Color = value; } }
         public float Width { get; set; }
         public float Height { get; set; }
         public bool ResolveWithStatic { get; set; }
@@ -60,6 +60,7 @@ namespace PandaGameLibrary.Components
             Render2D = gameObject.AddComponent<Render2D>();
             Render2D.LayerDepth = -1;
             Render2D.Tag = "ColliderRender";
+            Color = Color.Red;
         }
 
         public override void Start()

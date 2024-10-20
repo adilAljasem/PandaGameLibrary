@@ -1,9 +1,7 @@
-using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework;
 using PandaGameLibrary.Components;
 using System.Collections.Immutable;
-
-namespace PandaGameLibrary.System;
 
 internal class RenderSystem
 {
@@ -16,11 +14,10 @@ internal class RenderSystem
             .OrderByDescending(render => render.LayerDepth) // Sort by layer depth first (higher values first)
             .ThenBy(render => render.gameObject.Transform?.Position.Y ?? float.MaxValue) // Then sort by Y position
             .ToArray();
-
         foreach (var render in renderableComponents)
         {
             render.Draw(spriteBatch, gameTime);
         }
     }
-
 }
+
