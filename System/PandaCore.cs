@@ -47,21 +47,14 @@ public class PandaCore
         collisionTimer += deltaTime;
 
         // Run collision checks at fixed intervals
-        if (collisionTimer >= CollisionInterval)
+
+        if (updateTask.IsCompleted)
         {
-            // Ensure collision checks only run 60 times per second
-            collisionTimer -= CollisionInterval;
-
-            if (updateTask.IsCompleted)
+            updateTask = Task.Run(delegate
             {
-                updateTask = Task.Run(delegate
-                {
-                    UpdateTimeCollisions = CollisionSystem.CheckCollisions(GameObjectSystem.GetEnabledGameObjects(), gameTime);
-                });
-            }
-
+                UpdateTimeCollisions = CollisionSystem.CheckCollisions(GameObjectSystem.GetEnabledGameObjects(), gameTime);
+            });
         }
-
         // Update other systems
         GameObjectSystem.UpdateGameObjects(gameTime);
         AudioSystem.Update(gameTime);

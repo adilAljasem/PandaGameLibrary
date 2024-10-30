@@ -53,6 +53,7 @@ public sealed class GameObject
 
     public void RemoveChild(GameObject child)
     {
+        if (child == null) return;
         child.Parent = null;
         child.isChild = false;
         child.Transform = new Transform();

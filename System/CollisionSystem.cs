@@ -11,36 +11,55 @@ namespace PandaGameLibrary.System
         private static Random random = new Random();
         private GameTime gameTime1 = new GameTime();
 
+        private const float TARGET_FRAMERATE = 60f;
+        private const float MAX_TIMESTEP = 1f / 30f; // Maximum allowed timestep
+        private float accumulatedTime = 0f;
 
         public double CheckCollisions(ImmutableList<GameObject> gameObjects, GameTime gameTime)
         {
             Stopwatch stopwatch = Stopwatch.StartNew();
 
-            gameTime1 = gameTime;
-            var allColliders = new List<ColliderComponent>(gameObjects.Count * 2); // Estimate 2 colliders per object
+            float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            accumulatedTime += deltaTime;
 
-            // Collect all collider components from the game objects
+            // Limit the accumulated time to prevent spiral of death
+            if (accumulatedTime > MAX_TIMESTEP)
+            {
+                accumulatedTime = MAX_TIMESTEP;
+            }
+
+            // Perform collision checks with the accumulated time
+            if (accumulatedTime > 0)
+            {
+                float timeStep = accumulatedTime;
+                PerformCollisionChecks(gameObjects, timeStep);
+                accumulatedTime = 0;
+            }
+
+            stopwatch.Stop();
+            return stopwatch.Elapsed.TotalMilliseconds;
+        }
+
+        private void PerformCollisionChecks(ImmutableList<GameObject> gameObjects, float deltaTime)
+        {
+            var allColliders = new List<ColliderComponent>(gameObjects.Count * 2);
+
             foreach (var gameObject in gameObjects)
             {
                 allColliders.AddRange(gameObject.GetComponents<ColliderComponent>());
             }
 
-            // Get the number of CPU cores available
-            int numberOfCores = Environment.ProcessorCount * 2;
-
-            // Split the collider list into parts for multitasking
+            int numberOfCores = Environment.ProcessorCount;
             int collidersPerTask = allColliders.Count / numberOfCores;
             List<Task> tasks = new List<Task>();
 
             for (int coreIndex = 0; coreIndex < numberOfCores; coreIndex++)
             {
                 int start = coreIndex * collidersPerTask;
-                int end = (coreIndex == numberOfCores - 1) ? allColliders.Count : start + collidersPerTask; // Last task gets any remaining colliders
+                int end = (coreIndex == numberOfCores - 1) ? allColliders.Count : start + collidersPerTask;
 
-                // Create a task for each chunk
                 var task = Task.Run(() =>
                 {
-                    // Loop through the colliders assigned to this task
                     for (int i = start; i < end; i++)
                     {
                         var colliderA = allColliders[i];
@@ -51,25 +70,20 @@ namespace PandaGameLibrary.System
                             var colliderB = allColliders[j];
                             if (!colliderB.IsEnabled) continue;
 
-                            // Check if the two colliders are within distance and not part of the same object or family
                             if (IsWithinDistance(colliderA, colliderB) &&
                                 colliderA.gameObject.GameObjectId != colliderB.gameObject.GameObjectId &&
                                 !IsRelated(colliderA.gameObject, colliderB.gameObject))
                             {
-                                // Handle collision if both colliders have the collision flag set
                                 if (colliderA.Collision && colliderB.Collision)
                                     HandleCollision(colliderA, colliderB);
 
-                                // Resolve collision unless both colliders are transparent
                                 if (!colliderA.Transparent && !colliderB.Transparent)
                                 {
-                                    ResolveCollision(colliderA, colliderB);
-                                    ResolveCollision(colliderB, colliderA);
+                                    ResolveCollision(colliderA, colliderB, deltaTime);
                                 }
                             }
                             else
                             {
-                                // Check for exit collisions (if applicable)
                                 CheckExitCollisions(colliderA, colliderB);
                             }
                         }
@@ -79,13 +93,12 @@ namespace PandaGameLibrary.System
                 tasks.Add(task);
             }
 
-            // Wait for all tasks to complete
             Task.WaitAll(tasks.ToArray());
-
-            stopwatch.Stop();
-            return stopwatch.Elapsed.TotalMilliseconds;
         }
 
+        // ... (other existing methods like HandleCollision, IsWithinDistance, IsRelated, etc.)
+
+        
         private void HandleCollision(ColliderComponent colliderA, ColliderComponent colliderB)
         {
             byte dummy;
@@ -156,6 +169,69 @@ namespace PandaGameLibrary.System
 
             return false;
         }
+
+        private void ResolveCollision(ColliderComponent collider1, ColliderComponent collider2, float deltaTime)
+        {
+            Vector2 direction = collider1.Center - collider2.Center;
+            float currentDistance = direction.Length();
+
+            // Handle the case where colliders are in the exact same position
+            if (currentDistance == 0)
+            {
+                direction = new Vector2(0.5f, 0.5f);
+                currentDistance = direction.Length();
+            }
+
+            float minimumDistance = collider1.Radius + collider2.Radius;
+            float overlapDistance = minimumDistance - currentDistance;
+
+            if (overlapDistance > 0)
+            {
+                Vector2 movementDirection = Vector2.Normalize(direction);
+                Vector2 resolutionVector = movementDirection * overlapDistance;
+
+                // Calculate the frame rate independent smoothing factor
+                float smoothingFactor = 0.4f * (deltaTime / (1f / TARGET_FRAMERATE));
+
+                if (collider1.IsDynamic && collider2.IsDynamic)
+                {
+                    ResolveDoubleDynamicCollision(collider1, collider2, resolutionVector, smoothingFactor);
+                }
+                else if (collider1.IsDynamic && !collider2.IsDynamic)
+                {
+                    ResolveDynamicStaticCollision(collider1, resolutionVector, smoothingFactor);
+                }
+                else if (!collider1.IsDynamic && collider2.IsDynamic)
+                {
+                    ResolveDynamicStaticCollision(collider2, -resolutionVector, smoothingFactor);
+                }
+                else if (!collider1.IsDynamic && !collider2.IsDynamic && collider1.ResolveWithStatic && collider2.ResolveWithStatic)
+                {
+                    ResolveDoubleStaticCollision(collider1, collider2, resolutionVector, smoothingFactor);
+                }
+            }
+        }
+
+        private void ResolveDoubleDynamicCollision(ColliderComponent collider1, ColliderComponent collider2, Vector2 resolutionVector, float smoothingFactor)
+        {
+            collider1.gameObject.Transform.Position += resolutionVector * 0.5f * smoothingFactor;
+            collider2.gameObject.Transform.Position -= resolutionVector * 0.5f * smoothingFactor;
+        }
+
+        private void ResolveDynamicStaticCollision(ColliderComponent dynamicCollider, Vector2 resolutionVector, float smoothingFactor)
+        {
+            if (!dynamicCollider.TransparentWithStatic)
+            {
+                dynamicCollider.gameObject.Transform.Position += resolutionVector * smoothingFactor;
+            }
+        }
+
+        private void ResolveDoubleStaticCollision(ColliderComponent collider1, ColliderComponent collider2, Vector2 resolutionVector, float smoothingFactor)
+        {
+            // Move both static objects slightly
+            collider1.gameObject.Transform.Position += resolutionVector * 0.1f * smoothingFactor;
+            collider2.gameObject.Transform.Position -= resolutionVector * 0.1f * smoothingFactor;
+        }
         //private bool IsParentChildOrSiblings(GameObject a, GameObject b)
         //{
         //    if (a.Parent == b || b.Parent == a)
@@ -173,94 +249,94 @@ namespace PandaGameLibrary.System
         //    return false;
         //}
 
-        private void ResolveCollision(ColliderComponent collider1, ColliderComponent collider2)
-        {
-            // Case 1: Both colliders are dynamic
-            if (collider1.IsDynamic && collider2.IsDynamic)
-            {
-                ResolveDoubleDynamicCollision(collider1, collider2);
-            }
-            // Case 2: Only collider1 is dynamic and it's not set to be transparent with static
-            else if (collider1.IsDynamic && !collider2.IsDynamic && !collider1.TransparentWithStatic)
-            {
-                ResolveDynamicStaticCollision(collider1, collider2);
-            }
-            // Case 3: Only collider2 is dynamic and it's not set to be transparent with static
-            else if (!collider1.IsDynamic && collider2.IsDynamic && !collider2.TransparentWithStatic)
-            {
-                ResolveDynamicStaticCollision(collider2, collider1);
-            }
-            else if (!collider1.IsDynamic && !collider2.IsDynamic && collider1.ResolveWithStatic && collider2.ResolveWithStatic)
-            {
-                ResolveDoubleStaticCollision(collider1, collider2);
-            }
-            // In all other cases (including when TransparentWithStatic is true), do nothing
-        }
-        private void ResolveDoubleDynamicCollision(ColliderComponent collider1, ColliderComponent collider2)
-        {
-            Vector2 direction = collider1.Center - collider2.Center;
-            float currentDistance = direction.Length();
-            // Handle the case where players are in the exact same position
-            if (currentDistance == 0)
-            {
-                // Generate a random direction
-                direction = new Vector2(/*(float)random.NextDouble() -*/ 0.5f, /*(float)random.NextDouble() - */0.5f);
-                currentDistance = direction.Length();
-            }
-            float minimumDistance = collider1.Radius + collider2.Radius;
-            float overlapDistance = minimumDistance - currentDistance;
-            if (overlapDistance > 2)
-            {
-                Vector2 movementDirection = Vector2.Normalize(direction);
-                Vector2 resolutionVector = movementDirection * overlapDistance * 0.5f; // Split the resolution between both objects
-                collider1.gameObject.Transform.Position += resolutionVector * 0.4f * (float)gameTime1.ElapsedGameTime.TotalSeconds * 60;
+        //private void ResolveCollision(ColliderComponent collider1, ColliderComponent collider2)
+        //{
+        //    // Case 1: Both colliders are dynamic
+        //    if (collider1.IsDynamic && collider2.IsDynamic)
+        //    {
+        //        ResolveDoubleDynamicCollision(collider1, collider2);
+        //    }
+        //    // Case 2: Only collider1 is dynamic and it's not set to be transparent with static
+        //    else if (collider1.IsDynamic && !collider2.IsDynamic && !collider1.TransparentWithStatic)
+        //    {
+        //        ResolveDynamicStaticCollision(collider1, collider2);
+        //    }
+        //    // Case 3: Only collider2 is dynamic and it's not set to be transparent with static
+        //    else if (!collider1.IsDynamic && collider2.IsDynamic && !collider2.TransparentWithStatic)
+        //    {
+        //        ResolveDynamicStaticCollision(collider2, collider1);
+        //    }
+        //    else if (!collider1.IsDynamic && !collider2.IsDynamic && collider1.ResolveWithStatic && collider2.ResolveWithStatic)
+        //    {
+        //        ResolveDoubleStaticCollision(collider1, collider2);
+        //    }
+        //    // In all other cases (including when TransparentWithStatic is true), do nothing
+        //}
+        //private void ResolveDoubleDynamicCollision(ColliderComponent collider1, ColliderComponent collider2)
+        //{
+        //    Vector2 direction = collider1.Center - collider2.Center;
+        //    float currentDistance = direction.Length();
+        //    // Handle the case where players are in the exact same position
+        //    if (currentDistance == 0)
+        //    {
+        //        // Generate a random direction
+        //        direction = new Vector2(/*(float)random.NextDouble() -*/ 0.5f, /*(float)random.NextDouble() - */0.5f);
+        //        currentDistance = direction.Length();
+        //    }
+        //    float minimumDistance = collider1.Radius + collider2.Radius;
+        //    float overlapDistance = minimumDistance - currentDistance;
+        //    if (overlapDistance > 2)
+        //    {
+        //        Vector2 movementDirection = Vector2.Normalize(direction);
+        //        Vector2 resolutionVector = movementDirection * overlapDistance * 0.5f; // Split the resolution between both objects
+        //        collider1.gameObject.Transform.Position += resolutionVector * 0.4f * FIXED_TIME_STEP * 60;
 
-            }
-        }
-        private void ResolveDynamicStaticCollision(ColliderComponent dynamicCollider, ColliderComponent staticCollider)
-        {
-            Vector2 direction = dynamicCollider.Center - staticCollider.Center;
-            float currentDistance = direction.Length();
-            // Handle the case where colliders are in the exact same position
-            if (currentDistance == 0)
-            {
-                // Generate a random direction
-                direction = new Vector2(/*(float)random.NextDouble() -*/ 0.5f, /*(float)random.NextDouble() -*/ 0.5f);
-                currentDistance = direction.Length();
-            }
-            float minimumDistance = dynamicCollider.Radius + staticCollider.Radius;
-            float overlapDistance = minimumDistance - currentDistance;
-            if (overlapDistance > 2)
-            {
-                Vector2 movementDirection = Vector2.Normalize(direction);
-                Vector2 resolutionVector = movementDirection * overlapDistance;
-                dynamicCollider.gameObject.Transform.Position += resolutionVector * 0.4f * (float)gameTime1.ElapsedGameTime.TotalSeconds * 60;
-            }
-        }
+        //    }
+        //}
+        //private void ResolveDynamicStaticCollision(ColliderComponent dynamicCollider, ColliderComponent staticCollider)
+        //{
+        //    Vector2 direction = dynamicCollider.Center - staticCollider.Center;
+        //    float currentDistance = direction.Length();
+        //    // Handle the case where colliders are in the exact same position
+        //    if (currentDistance == 0)
+        //    {
+        //        // Generate a random direction
+        //        direction = new Vector2(/*(float)random.NextDouble() -*/ 0.5f, /*(float)random.NextDouble() -*/ 0.5f);
+        //        currentDistance = direction.Length();
+        //    }
+        //    float minimumDistance = dynamicCollider.Radius + staticCollider.Radius;
+        //    float overlapDistance = minimumDistance - currentDistance;
+        //    if (overlapDistance > 2)
+        //    {
+        //        Vector2 movementDirection = Vector2.Normalize(direction);
+        //        Vector2 resolutionVector = movementDirection * overlapDistance;
+        //        dynamicCollider.gameObject.Transform.Position += resolutionVector * 0.4f * FIXED_TIME_STEP * 60;
+        //    }
+        //}
 
-        private void ResolveDoubleStaticCollision(ColliderComponent collider1, ColliderComponent collider2)
-        {
-            Vector2 direction = collider1.Center - collider2.Center;
-            float currentDistance = direction.Length();
-            // Handle the case where colliders are in the exact same position
-            if (currentDistance == 0)
-            {
-                direction = new Vector2(0.5f, 0.5f);
-                currentDistance = direction.Length();
-            }
-            float minimumDistance = collider1.Radius + collider2.Radius;
-            float overlapDistance = minimumDistance - currentDistance;
-            if (overlapDistance > 2)
-            {
-                Vector2 movementDirection = Vector2.Normalize(direction);
-                Vector2 resolutionVector = movementDirection * overlapDistance * 0.5f; // Split the resolution between both objects
+        //private void ResolveDoubleStaticCollision(ColliderComponent collider1, ColliderComponent collider2)
+        //{
+        //    Vector2 direction = collider1.Center - collider2.Center;
+        //    float currentDistance = direction.Length();
+        //    // Handle the case where colliders are in the exact same position
+        //    if (currentDistance == 0)
+        //    {
+        //        direction = new Vector2(0.5f, 0.5f);
+        //        currentDistance = direction.Length();
+        //    }
+        //    float minimumDistance = collider1.Radius + collider2.Radius;
+        //    float overlapDistance = minimumDistance - currentDistance;
+        //    if (overlapDistance > 2)
+        //    {
+        //        Vector2 movementDirection = Vector2.Normalize(direction);
+        //        Vector2 resolutionVector = movementDirection * overlapDistance * 0.5f; // Split the resolution between both objects
 
-                // Move both static objects slightly
-                collider1.gameObject.Transform.Position += resolutionVector * 0.1f * (float)gameTime1.ElapsedGameTime.TotalSeconds * 60;
-                collider2.gameObject.Transform.Position -= resolutionVector * 0.1f * (float)gameTime1.ElapsedGameTime.TotalSeconds * 60;
+        //        // Move both static objects slightly
+        //        collider1.gameObject.Transform.Position += resolutionVector * 0.1f * FIXED_TIME_STEP * 60;
+        //        collider2.gameObject.Transform.Position -= resolutionVector * 0.1f * FIXED_TIME_STEP * 60;
 
-            }
-        }
+        //    }
+        //}
 
 
     }

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Xna.Framework;
 using System.Diagnostics;
+using MessagePack;
 
 namespace PandaGameLibrary.System
 {
