@@ -135,26 +135,7 @@ namespace PandaGameLibrary.System
             }
         }
 
-        private List<GameObject> GetAllChildrenWithTag(GameObject parent, string tag)
-        {
-            var result = new List<GameObject>();
-            SearchChildrenWithTag(parent, tag, result);
-            return result;
-        }
-
-        private void SearchChildrenWithTag(GameObject parent, string tag, List<GameObject> result)
-        {
-            foreach (var child in parent.Children)
-            {
-                if (child.Tag == tag)
-                {
-                    result.Add(child);
-                }
-                // Recursively search through this child's children
-                SearchChildrenWithTag(child, tag, result);
-            }
-        }
-
+      
 
         public ImmutableList<GameObject> GetAllGameObjects()
         {
@@ -188,5 +169,26 @@ namespace PandaGameLibrary.System
                 gameObject.Update(gameTime);
             }
         }
+
+        private List<GameObject> GetAllChildrenWithTag(GameObject parent, string tag)
+        {
+            var result = new List<GameObject>();
+            SearchChildrenWithTag(parent, tag, result);
+            return result;
+        }
+
+        private void SearchChildrenWithTag(GameObject parent, string tag, List<GameObject> result)
+        {
+            foreach (var child in parent.Children)
+            {
+                if (child.Tag == tag)
+                {
+                    result.Add(child);
+                }
+                // Recursively search through this child's children
+                SearchChildrenWithTag(child, tag, result);
+            }
+        }
+
     }
 }

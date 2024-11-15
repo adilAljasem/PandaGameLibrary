@@ -60,6 +60,25 @@ public sealed class GameObject
         child.Transform.Position = Transform.Position;
         Children = Children.Remove(child);
     }
+    public void RemoveChildren(List<GameObject> children)
+    {
+        if (children == null || children.Count == 0) return;
+
+        // Create a new immutable list by removing all children
+        // ImmutableList builds incrementally, so we can use RemoveRange
+        Children = Children.RemoveRange(children.Where(child => child != null));
+
+        // Update each removed child's properties
+        foreach (var child in children)
+        {
+            if (child == null) continue;
+
+            child.Parent = null;
+            child.isChild = false;
+            child.Transform = new Transform();
+            child.Transform.Position = Transform.Position;
+        }
+    }
 
     public void SetEnable(bool enable)
     {

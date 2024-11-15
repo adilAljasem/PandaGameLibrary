@@ -150,6 +150,7 @@ public class AudioZone : Component
 
         foreach (var instances in currentPlayingSoundEffects.Values)
         {
+            if (instances == null) continue;
             foreach (var instance in instances)
             {
                 instance.Volume = IsLocal ? PandaCore.Instance.AudioSystem.AudioVolume : finalVolume * PandaCore.Instance.AudioSystem.AudioVolume;
