@@ -9,25 +9,37 @@ namespace PandaGameLibrary.Components;
 public sealed class GameObject
 {
     public Guid GameObjectId { get; set; }
-
     public string GameObjectName { get; set; }
-
     public string Tag { get; set; }
-
     public Transform Transform { get; set; }
-
     private ImmutableList<Component> _components = ImmutableList<Component>.Empty;
     public GameObject Parent { get; set; }
     public bool isChild { get; set; }
     public ImmutableList<GameObject> Children { get; set; } = ImmutableList<GameObject>.Empty;
     public bool IsEnable { get; private set; } = true;
     private bool AwakeCalled = false;
+    public Action OnGameObjectDestroy { get; set; }
 
     public GameObject()
     {
         Transform = new Transform();
         GameObjectId = Guid.NewGuid();
         PandaCore.Instance.GameObjectSystem.AddGameObject(this);
+    }
+
+    internal void InvokeGameObjectDestroy()
+    {
+        // Destroy all components
+        foreach (var comp in _components.ToList())
+        {
+            comp.Destroy();
+        }
+        _components = ImmutableList<Component>.Empty;
+
+        // Finally invoke the destroy event
+        var handler = OnGameObjectDestroy;
+        OnGameObjectDestroy = null;  // Clear the event to prevent memory leaks
+        handler?.Invoke();
     }
 
     public void AddChild(GameObject child)
@@ -174,6 +186,7 @@ public sealed class GameObject
         var component = _components.OfType<T>().FirstOrDefault();
         if (component != null)
         {
+            component.Destroy();
             _components = _components.Remove(component);
         }
     }
@@ -183,6 +196,7 @@ public sealed class GameObject
         var component = _components.FirstOrDefault(w => w.ComponentId == Component.ComponentId);
         if (component != null)
         {
+            component.Destroy();
             _components = _components.Remove(component);
         }
     }
@@ -192,6 +206,7 @@ public sealed class GameObject
         var componentToRemove = _components.FirstOrDefault(c => c.Tag == tag);
         if (componentToRemove != null)
         {
+            componentToRemove.Destroy();
             _components = _components.Remove(componentToRemove);
         }
     }

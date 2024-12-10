@@ -20,7 +20,7 @@ public class Render2D : Component
     public float Rotation { get; set; } = 0f;
     public Vector2 Origin { get; set; } = Vector2.Zero;
     //public float Scale { get; set; } = 1f;
-    public Vector2 Scale { get; set; } = new Vector2(1,1);
+    public Vector2 Scale { get; set; } = new Vector2(1, 1);
     public float LayerDepth { get; set; } = 1f;
     private SpriteColorEffect? SpriteColorEffect { get; set; }
     private CircleData circle;
@@ -29,6 +29,29 @@ public class Render2D : Component
     internal Vector2 ColliderCenter { get; set; }
     private bool Stretched = false;
     private bool CircleDataCreated = false;
+    private Texture2D _lineTexture;
+    private bool _drawingLine { get; set; }
+    Vector2 _detla;
+    float _angle;
+    Vector2 _start;
+    private Color _color;
+    private List<LineData> _linesToDraw = new List<LineData>();
+
+    private class LineData
+    {
+        public Vector2 Start;
+        public Vector2 End;
+        public Color Color;
+        public float Thickness;
+
+        public LineData(Vector2 start, Vector2 end, Color color, float thickness)
+        {
+            Start = start;
+            End = end;
+            Color = color;
+            Thickness = thickness;
+        }
+    }
 
     public override void Awake()
     {
@@ -36,6 +59,7 @@ public class Render2D : Component
         Rotation = base.gameObject.Transform.Rotation;
         SpriteColorEffect = new SpriteColorEffect(this);
         circle = new CircleData(Color);
+        CreateLineTexture();
         //PandaCore.Instance.RenderSystem.AddGameObject(gameObject);
     }
 
@@ -114,7 +138,7 @@ public class Render2D : Component
         }
     }
 
-    public void Draw(SpriteBatch spriteBatch, GameTime gameTime)
+    internal void Draw(SpriteBatch spriteBatch, GameTime gameTime)
     {
         if (Texture != null && !AnimationManagerComponent.IsPlaying && !Stretched)
         {
@@ -129,10 +153,42 @@ public class Render2D : Component
         {
             circle.Draw(spriteBatch);
         }
+
+        // Draw all lines
+        foreach (var line in _linesToDraw)
+        {
+            Vector2 delta = line.End - line.Start;
+            float angle = (float)Math.Atan2(delta.Y, delta.X);
+
+            spriteBatch.Draw(
+                _lineTexture,
+                line.Start,
+                null,
+                line.Color,
+                angle,
+                Vector2.Zero,
+                new Vector2(delta.Length(), line.Thickness),
+                SpriteEffects.None,
+                LayerDepth
+            );
+        }
+
+        // Clear the lines after drawing
+        _linesToDraw.Clear();
+    }
+
+    public void DrawLine(Vector2 start, Vector2 end, Color color, float thickness = 1f)
+    {
+        if (_lineTexture == null)
+        {
+            CreateLineTexture();
+        }
+
+        _linesToDraw.Add(new LineData(start, end, color, thickness));
     }
     private void UpdateCircle()
     {
-        if(!CircleDataCreated) circle = new CircleData(Color);
+        if (!CircleDataCreated) circle = new CircleData(Color);
         CircleDataCreated = true;
         circle.SetCircleData(ColliderCenter, ColliderRadius, 16);
         circle.Update();
@@ -146,5 +202,10 @@ public class Render2D : Component
         {
             UpdateCircle();
         }
+    }
+    private void CreateLineTexture()
+    {
+        _lineTexture = new Texture2D(PandaCore.Instance.Game.GraphicsDevice, 1, 1);
+        _lineTexture.SetData(new[] { Color.White });
     }
 }

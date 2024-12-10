@@ -15,8 +15,13 @@ namespace PandaGameLibrary.System
 
         public void RemoveGameObject(GameObject gameObject)
         {
+            if (gameObject.Parent != null)
+            {
+                gameObject.Parent.Children = gameObject.Parent.Children.Remove(gameObject);
+            }
+
             ImmutableInterlocked.Update(ref allGameObjects, list => list.Remove(gameObject));
-            //PandaCore.Instance.RenderSystem.RemoveGameObject(gameObject);
+            gameObject.InvokeGameObjectDestroy();
         }
         public void RemoveGameObject(Guid Id)
         {
@@ -24,6 +29,7 @@ namespace PandaGameLibrary.System
             if (gameObjectToRemove != null)
             {
                 ImmutableInterlocked.Update(ref allGameObjects, list => list.Remove(gameObjectToRemove));
+                gameObjectToRemove.InvokeGameObjectDestroy();
             }
         }
 
@@ -85,12 +91,24 @@ namespace PandaGameLibrary.System
 
         private void RemoveChildrenRecursively(GameObject gameObject)
         {
+            // Create a copy of the children list to avoid modification during iteration
+            var childrenCopy = gameObject.Children.ToList();
+
             // Remove all children recursively
-            foreach (var child in gameObject.Children)
+            foreach (var child in childrenCopy)
             {
                 RemoveChildrenRecursively(child);
                 RemoveGameObject(child);
+
+                // Remove the child from the parent's Children collection using immutable update
+                gameObject.Children = gameObject.Children.Remove(child);
+
+                if (child.Parent != null)
+                {
+                    child.Parent.Children = child.Parent.Children.Remove(child);
+                }
             }
+
         }
 
         public void RemoveGameObjectsByTag(string tag)
@@ -135,7 +153,7 @@ namespace PandaGameLibrary.System
             }
         }
 
-      
+
 
         public ImmutableList<GameObject> GetAllGameObjects()
         {

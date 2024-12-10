@@ -7,32 +7,34 @@ namespace PandaGameLibrary.System
 {
     internal class CollisionSystem
     {
-        private float SMOOTHING_FACTOR = 0.4f; // Adjust this value between 0 and 1 for desired smoothness
+        private float SMOOTHING_FACTOR = 500.4f; // Adjust this value between 0 and 1 for desired smoothness
         private static Random random = new Random();
         private GameTime gameTime1 = new GameTime();
+        private const float MIN_VELOCITY = 0.01f;
+        private const float MAX_VELOCITY = 10f;
 
-        private const float TARGET_FRAMERATE = 60f;
-        private const float MAX_TIMESTEP = 1f / 30f; // Maximum allowed timestep
+        private float MAX_TIMESTEP = 1f / 5f; // Maximum allowed timestep
         private float accumulatedTime = 0f;
 
         public double CheckCollisions(ImmutableList<GameObject> gameObjects, GameTime gameTime)
         {
+            gameTime1 = gameTime;
             Stopwatch stopwatch = Stopwatch.StartNew();
-
+            MAX_TIMESTEP = 1f / 60f;
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
             accumulatedTime += deltaTime;
 
             // Limit the accumulated time to prevent spiral of death
-            if (accumulatedTime > MAX_TIMESTEP)
-            {
-                accumulatedTime = MAX_TIMESTEP;
-            }
+            //if (accumulatedTime > MAX_TIMESTEP)
+            //{
+            //    accumulatedTime = MAX_TIMESTEP;
+            //}
 
             // Perform collision checks with the accumulated time
-            if (accumulatedTime > 0)
+            if (accumulatedTime > MAX_TIMESTEP)
             {
                 float timeStep = accumulatedTime;
-                PerformCollisionChecks(gameObjects, timeStep);
+                PerformCollisionChecks(gameObjects);
                 accumulatedTime = 0;
             }
 
@@ -40,7 +42,7 @@ namespace PandaGameLibrary.System
             return stopwatch.Elapsed.TotalMilliseconds;
         }
 
-        private void PerformCollisionChecks(ImmutableList<GameObject> gameObjects, float deltaTime)
+        private void PerformCollisionChecks(ImmutableList<GameObject> gameObjects)
         {
             var allColliders = new List<ColliderComponent>(gameObjects.Count * 2);
 
@@ -79,7 +81,7 @@ namespace PandaGameLibrary.System
 
                                 if (!colliderA.Transparent && !colliderB.Transparent)
                                 {
-                                    ResolveCollision(colliderA, colliderB, deltaTime);
+                                    ResolveCollision(colliderA, colliderB);
                                 }
                             }
                             else
@@ -170,11 +172,11 @@ namespace PandaGameLibrary.System
             return false;
         }
 
-        private void ResolveCollision(ColliderComponent collider1, ColliderComponent collider2, float deltaTime)
+        private void ResolveCollision(ColliderComponent collider1, ColliderComponent collider2)
         {
             Vector2 direction = collider1.Center - collider2.Center;
             float currentDistance = direction.Length();
-
+            var deltaTime = (float)gameTime1.ElapsedGameTime.TotalSeconds;
             // Handle the case where colliders are in the exact same position
             if (currentDistance == 0)
             {
@@ -191,34 +193,34 @@ namespace PandaGameLibrary.System
                 Vector2 resolutionVector = movementDirection * overlapDistance;
 
                 // Calculate the frame rate independent smoothing factor
-                float smoothingFactor = 0.4f * (deltaTime / (1f / TARGET_FRAMERATE));
+                float smoothingFactor = 0.4f * (deltaTime / (1f / 60));
 
                 if (collider1.IsDynamic && collider2.IsDynamic)
                 {
-                    ResolveDoubleDynamicCollision(collider1, collider2, resolutionVector, smoothingFactor);
+                    ResolveDoubleDynamicCollision(collider1, collider2, resolutionVector, smoothingFactor , deltaTime);
                 }
                 else if (collider1.IsDynamic && !collider2.IsDynamic)
                 {
-                    ResolveDynamicStaticCollision(collider1, resolutionVector, smoothingFactor);
+                    ResolveDynamicStaticCollision(collider1, resolutionVector, smoothingFactor , deltaTime);
                 }
                 else if (!collider1.IsDynamic && collider2.IsDynamic)
                 {
-                    ResolveDynamicStaticCollision(collider2, -resolutionVector, smoothingFactor);
+                    ResolveDynamicStaticCollision(collider2, -resolutionVector, smoothingFactor , deltaTime);
                 }
                 else if (!collider1.IsDynamic && !collider2.IsDynamic && collider1.ResolveWithStatic && collider2.ResolveWithStatic)
                 {
-                    ResolveDoubleStaticCollision(collider1, collider2, resolutionVector, smoothingFactor);
+                    ResolveDoubleStaticCollision(collider1, collider2, resolutionVector, smoothingFactor , deltaTime);
                 }
             }
         }
 
-        private void ResolveDoubleDynamicCollision(ColliderComponent collider1, ColliderComponent collider2, Vector2 resolutionVector, float smoothingFactor)
+        private void ResolveDoubleDynamicCollision(ColliderComponent collider1, ColliderComponent collider2, Vector2 resolutionVector, float smoothingFactor , float delta)
         {
-            collider1.gameObject.Transform.Position += resolutionVector * 0.5f * smoothingFactor;
-            collider2.gameObject.Transform.Position -= resolutionVector * 0.5f * smoothingFactor;
+            collider1.gameObject.Transform.Position += resolutionVector *  smoothingFactor;
+            collider2.gameObject.Transform.Position -= resolutionVector *  smoothingFactor;
         }
 
-        private void ResolveDynamicStaticCollision(ColliderComponent dynamicCollider, Vector2 resolutionVector, float smoothingFactor)
+        private void ResolveDynamicStaticCollision(ColliderComponent dynamicCollider, Vector2 resolutionVector, float smoothingFactor,float delta)
         {
             if (!dynamicCollider.TransparentWithStatic)
             {
@@ -226,11 +228,11 @@ namespace PandaGameLibrary.System
             }
         }
 
-        private void ResolveDoubleStaticCollision(ColliderComponent collider1, ColliderComponent collider2, Vector2 resolutionVector, float smoothingFactor)
+        private void ResolveDoubleStaticCollision(ColliderComponent collider1, ColliderComponent collider2, Vector2 resolutionVector, float smoothingFactor, float delta)
         {
             // Move both static objects slightly
-            collider1.gameObject.Transform.Position += resolutionVector * 0.1f * smoothingFactor;
-            collider2.gameObject.Transform.Position -= resolutionVector * 0.1f * smoothingFactor;
+            collider1.gameObject.Transform.Position += resolutionVector *  smoothingFactor;
+            collider2.gameObject.Transform.Position -= resolutionVector *  smoothingFactor;
         }
         //private bool IsParentChildOrSiblings(GameObject a, GameObject b)
         //{

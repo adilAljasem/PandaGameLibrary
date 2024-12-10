@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Media;
 using PandaGameLibrary.Components;
 using PandaGameLibrary.System;
+using System.Collections.Concurrent;
 
 namespace PandaGameLibrary.Audio;
 /// <summary>
@@ -21,7 +22,7 @@ public class AudioZone : Component
     public bool IsLocal { get; set; }
 
     private Dictionary<string, List<SoundEffectInstance>> currentPlayingSoundEffects = new Dictionary<string, List<SoundEffectInstance>>();
-    private List<string> soundEffectNames = new List<string>();
+    private ConcurrentDictionary<string, string> soundEffectNames = new ConcurrentDictionary<string, string>();
 
     public override void Awake()
     {
@@ -60,38 +61,43 @@ public class AudioZone : Component
 
     public void AddSoundEffect(string path, string soundEffectName)
     {
-        if (!soundEffectNames.Contains(soundEffectName))
+        // Use TryAdd to ensure thread-safe addition
+        if (soundEffectNames.TryAdd(soundEffectName, path))
         {
-            soundEffectNames.Add(soundEffectName);
-            PandaCore.Instance.AudioSystem.soundEffects[soundEffectName] = PandaCore.Instance.Game.Content.Load<SoundEffect>(path);
+            PandaCore.Instance.AudioSystem.soundEffects[soundEffectName] =
+                PandaCore.Instance.Game.Content.Load<SoundEffect>(path);
         }
     }
 
-    public void PlayAudio()
-    {
-        if (!string.IsNullOrEmpty(SongName))
-        {
-            PandaCore.Instance.AudioSystem.PlaySong(SongName, false);
-        }
+    //public void PlayAudio()
+    //{
+    //    if (!string.IsNullOrEmpty(SongName))
+    //    {
+    //        PandaCore.Instance.AudioSystem.PlaySong(SongName, false);
+    //    }
 
-        foreach (var soundEffectName in soundEffectNames)
-        {
-            PlaySoundEffect(soundEffectName);
-        }
+    //    foreach (var soundEffectName in soundEffectNames)
+    //    {
+    //        PlaySoundEffect(soundEffectName);
+    //    }
 
-        IsPlaying = true;
-    }
+    //    IsPlaying = true;
+    //}
 
     public void PlaySoundEffect(string soundEffectName)
     {
-        if (string.IsNullOrEmpty(soundEffectName) || !PandaCore.Instance.AudioSystem.soundEffects.TryGetValue(soundEffectName, out SoundEffect soundEffect))
+        if (string.IsNullOrEmpty(soundEffectName) || soundEffectName == null || !PandaCore.Instance.AudioSystem.soundEffects.TryGetValue(soundEffectName, out SoundEffect soundEffect))
         {
             return;
         }
 
         var instance = soundEffect.CreateInstance();
         instance.IsLooped = false;
-        instance.Volume = IsLocal ? PandaCore.Instance.AudioSystem.AudioVolume : ZoneAudioVolume * PandaCore.Instance.AudioSystem.AudioVolume;
+        float volumeMultiplier = IsDynamicAudio ? CalculateVolumeBasedOnDistance() : 1f;
+        float finalVolume = ZoneAudioVolume * volumeMultiplier;
+
+        instance.Volume = IsLocal ? PandaCore.Instance.AudioSystem.AudioVolume : finalVolume * PandaCore.Instance.AudioSystem.AudioVolume;
+
         instance.Play();
 
         if (!currentPlayingSoundEffects.TryGetValue(soundEffectName, out List<SoundEffectInstance> instances))
@@ -141,7 +147,6 @@ public class AudioZone : Component
     {
         float volumeMultiplier = IsDynamicAudio ? CalculateVolumeBasedOnDistance() : 1f;
         float finalVolume = ZoneAudioVolume * volumeMultiplier;
-
         if (!string.IsNullOrEmpty(SongName))
         {
             ZoneMusicVolume = IsLocal ? PandaCore.Instance.AudioSystem.MusicVolume : finalVolume * PandaCore.Instance.AudioSystem.MusicVolume;
@@ -162,6 +167,7 @@ public class AudioZone : Component
     {
         foreach (var kvp in currentPlayingSoundEffects)
         {
+            if (kvp.Key == null || kvp.Value == null) return;
             kvp.Value.RemoveAll(instance => instance.State == SoundState.Stopped);
         }
     }

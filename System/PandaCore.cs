@@ -55,6 +55,7 @@ public class PandaCore
                 UpdateTimeCollisions = CollisionSystem.CheckCollisions(GameObjectSystem.GetEnabledGameObjects(), gameTime);
             });
         }
+
         // Update other systems
         GameObjectSystem.UpdateGameObjects(gameTime);
         AudioSystem.Update(gameTime);

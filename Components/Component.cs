@@ -11,11 +11,13 @@ public abstract class Component
 	public GameObject gameObject { get; set; }
 	public string Tag { get; set; }
 	public bool IsEnabled { get; set; } = true;
+	public Action OnComponentDestroyEvent { get; set; }
 
 	//this constracter is working dont remove it
 	public Component()
 	{
 		ComponentId = Guid.NewGuid();
+		OnComponentDestroyEvent += OnComponentDestroy;
 	}
    
     public void ToggleEnable()
@@ -23,6 +25,18 @@ public abstract class Component
 		IsEnabled = !IsEnabled;
 	}
 
+	internal void Destroy()
+	{
+        //// Prevent circular destruction
+        //var go = gameObject;
+        //gameObject = null;  // Break the reference first
+
+        OnComponentDestroyEvent?.Invoke();
+	}
+
+	protected virtual void OnComponentDestroy()
+	{
+	}
 
     /// <summary>
     /// First Method Get Called In Component is Awake
