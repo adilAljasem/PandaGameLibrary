@@ -224,9 +224,11 @@ public sealed class GameObject
 
     public void Update(GameTime gameTime)
     {
-        for (int i = 0; i < _components.Count; i++)
+        var componentsList = _components;
+
+        for (int i = 0; i < componentsList.Count; i++)
         {
-            Component component = _components[i];
+            var component = componentsList[i];
             if (component.IsEnabled)
             {
                 if (component._startPending)

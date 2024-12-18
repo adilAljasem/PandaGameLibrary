@@ -2,7 +2,7 @@
 using Microsoft.Xna.Framework;
 using PandaGameLibrary.Components;
 
-public class Quadtree
+internal class Quadtree
 {
     private const int MAX_OBJECTS = 10;
     private const int MAX_LEVELS = 5;
