@@ -598,5 +598,3 @@ public class MyGame : Game
     }
 }
 ```
-
-This documentation provides a comprehensive overview of how to use the PandaGameLibrary for MonoGame development. Refer to the specific sections for more detailed information on each aspect of the library.
